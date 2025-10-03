@@ -34,4 +34,12 @@
         </activity>
     </application>
 
+    <!-- NOVO: Permite que o app consulte se outros apps (como o Google Maps) estão instalados -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="google.navigation" />
+        </intent>
+    </queries>
+
 </manifest>

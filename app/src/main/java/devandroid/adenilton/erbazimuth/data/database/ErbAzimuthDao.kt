@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface ErbAzimuthDao {
 
+    // A anotação @Transaction garante a consistência ao buscar a ERB e seus azimutes.
     @Transaction
     @Query("SELECT * FROM erbs")
     fun getAllErbsWithAzimutes(): Flow<List<ErbWithAzimutes>>
@@ -20,8 +21,7 @@ interface ErbAzimuthDao {
     @Query("SELECT * FROM erbs WHERE identificacao = :identificacao LIMIT 1")
     suspend fun getErbByIdentificacao(identificacao: String): Erb?
 
-    // CORREÇÃO: Adicionado o tipo de retorno Long para obter o ID da nova ERB.
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertErb(erb: Erb): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

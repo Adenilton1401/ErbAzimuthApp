@@ -21,9 +21,12 @@ abstract class ErbAzimuthDatabase : RoomDatabase() {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     ErbAzimuthDatabase::class.java,
-                    "erbazimuth_database"
+                    "erb_azimuth_database"
                 )
-                    .fallbackToDestructiveMigration() // Política de migração simples para desenvolvimento
+                    // --- ADICIONE ESTA LINHA ---
+                    // Instrui o Room a recriar o banco de dados se a estrutura mudar.
+                    // ATENÇÃO: Isso apagará todos os dados existentes.
+                    .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
                 instance
@@ -31,3 +34,4 @@ abstract class ErbAzimuthDatabase : RoomDatabase() {
         }
     }
 }
+

@@ -18,12 +18,12 @@ if (localPropertiesFile.exists()) {
 
 android {
     namespace = "devandroid.adenilton.erbazimuth"
-    compileSdk = 34 // Recomendo usar 34 por enquanto, que é a versão mais estável.
+    compileSdk = 36 // Recomendo usar 34 por enquanto, que é a versão mais estável.
 
     defaultConfig {
         applicationId = "devandroid.adenilton.erbazimuth"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -88,6 +88,8 @@ dependencies {
     // Room
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
+    implementation(libs.androidx.navigation.runtime.ktx)
+    implementation(libs.androidx.webkit)
     //implementation(libs.gms.play.services.maps)
     ksp(libs.androidx.room.compiler)
 
