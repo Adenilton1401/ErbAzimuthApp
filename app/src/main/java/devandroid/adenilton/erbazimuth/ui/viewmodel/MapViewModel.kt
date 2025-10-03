@@ -14,8 +14,14 @@ class MapViewModel(private val repository: ErbRepository) : ViewModel() {
     private val _erbsWithAzimutes = MutableStateFlow<List<ErbWithAzimutes>>(emptyList())
     val erbsWithAzimutes: StateFlow<List<ErbWithAzimutes>> = _erbsWithAzimutes.asStateFlow()
 
-    private val _showAddErbDialog = MutableStateFlow(false)
-    val showAddErbDialog: StateFlow<Boolean> = _showAddErbDialog.asStateFlow()
+    private val _itemToProcess = MutableStateFlow<Any?>(null)
+    val itemToProcess: StateFlow<Any?> = _itemToProcess.asStateFlow()
+
+    private val _isDialogVisible = MutableStateFlow(false)
+    val isDialogVisible: StateFlow<Boolean> = _isDialogVisible.asStateFlow()
+
+    private val _erbForDialogContext = MutableStateFlow<Erb?>(null)
+    val erbForDialogContext: StateFlow<Erb?> = _erbForDialogContext.asStateFlow()
 
     private val _newErbEvent = MutableSharedFlow<LatLng>()
     val newErbEvent: SharedFlow<LatLng> = _newErbEvent.asSharedFlow()
@@ -26,24 +32,53 @@ class MapViewModel(private val repository: ErbRepository) : ViewModel() {
     private val _itemToDelete = MutableStateFlow<Any?>(null)
     val itemToDelete: StateFlow<Any?> = _itemToDelete.asStateFlow()
 
-    // NOVO: Guarda a ERB de contexto para adicionar um novo azimute
-    private val _erbForNewAzimuth = MutableStateFlow<Erb?>(null)
-    val erbForNewAzimuth: StateFlow<Erb?> = _erbForNewAzimuth.asStateFlow()
-
     init {
+        viewModelScope.launch { repository.getAllErbsWithAzimutes().collect { _erbsWithAzimutes.value = it } }
+    }
+
+    fun onSave(erb: Erb, azimute: Azimute, azimuteToEdit: Azimute?) {
         viewModelScope.launch {
-            repository.getAllErbsWithAzimutes().collect { _erbsWithAzimutes.value = it }
+            if (azimuteToEdit != null) {
+                repository.updateAzimute(azimute)
+            } else {
+                val newErbId = repository.insertErbAndAzimuth(erb, azimute)
+                if (newErbId != -1L) {
+                    _newErbEvent.emit(LatLng(erb.latitude, erb.longitude))
+                }
+            }
+            onDismissDialog()
         }
     }
 
-    fun addErbAndAzimuth(erb: Erb, azimute: Azimute) {
-        viewModelScope.launch {
-            val newErbId = repository.insertErbAndAzimuth(erb, azimute)
-            if(newErbId != -1L) {
-                _newErbEvent.emit(LatLng(erb.latitude, erb.longitude))
-            }
-            onDismissAddErbDialog()
+    fun onAddErbRequest() {
+        _itemToProcess.value = null
+        _erbForDialogContext.value = null
+        _isDialogVisible.value = true
+    }
+
+    fun onAddAzimuthRequest(erb: Erb) {
+        _selectedItem.value = null
+        _itemToProcess.value = erb
+        _erbForDialogContext.value = erb
+        _isDialogVisible.value = true
+    }
+
+    fun onEditRequest(item: Any) {
+        _selectedItem.value = null
+        if (item is Azimute) {
+            val parentErb = _erbsWithAzimutes.value.find { erbWithAzimutes ->
+                erbWithAzimutes.azimutes.any { it.id == item.id }
+            }?.erb
+            _erbForDialogContext.value = parentErb
         }
+        _itemToProcess.value = item
+        _isDialogVisible.value = true
+    }
+
+    fun onDismissDialog() {
+        _isDialogVisible.value = false
+        _itemToProcess.value = null
+        _erbForDialogContext.value = null
     }
 
     fun onDeleteRequest(item: Any) {
@@ -63,25 +98,16 @@ class MapViewModel(private val repository: ErbRepository) : ViewModel() {
         }
     }
 
-    // NOVO: Lógica para o novo botão
-    fun onAddAzimuthRequest(erb: Erb) {
-        // Fecha a folha de detalhes
-        _selectedItem.value = null
-        // Define a ERB para a qual estamos adicionando um azimute
-        _erbForNewAzimuth.value = erb
-        // Mostra o diálogo de adição
-        _showAddErbDialog.value = true
+    fun onDismissDelete() {
+        _itemToDelete.value = null
     }
 
-    fun onDismissDelete() { _itemToDelete.value = null }
-    fun onShowAddErbDialog() { _showAddErbDialog.value = true }
-    fun onItemSelected(item: Any) { _selectedItem.value = item }
-    fun onDismissDetails() { _selectedItem.value = null }
+    fun onItemSelected(item: Any) {
+        _selectedItem.value = item
+    }
 
-    fun onDismissAddErbDialog() {
-        _showAddErbDialog.value = false
-        // Limpa a ERB de contexto quando o diálogo é fechado
-        _erbForNewAzimuth.value = null
+    fun onDismissDetails() {
+        _selectedItem.value = null
     }
 }
 

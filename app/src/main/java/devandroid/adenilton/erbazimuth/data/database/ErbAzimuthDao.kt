@@ -8,7 +8,6 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ErbAzimuthDao {
-
     @Transaction
     @Query("SELECT * FROM erbs")
     fun getAllErbsWithAzimutes(): Flow<List<ErbWithAzimutes>>
@@ -22,11 +21,17 @@ interface ErbAzimuthDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAzimute(azimute: Azimute)
 
-    // --- NOVOS MÉTODOS PARA EXCLUSÃO ---
     @Delete
     suspend fun deleteErb(erb: Erb)
 
     @Delete
     suspend fun deleteAzimute(azimute: Azimute)
+
+    @Update
+    suspend fun updateAzimute(azimute: Azimute)
+
+    // --- NOVO MÉTOO PARA ATUALIZAÇÃO DA ERB ---
+    @Update
+    suspend fun updateErb(erb: Erb)
 }
 

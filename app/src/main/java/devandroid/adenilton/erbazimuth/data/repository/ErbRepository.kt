@@ -25,7 +25,6 @@ class ErbRepository(private val dao: ErbAzimuthDao, private val context: Context
     suspend fun insertErbAndAzimuth(erb: Erb, azimute: Azimute): Long {
         return withContext(Dispatchers.IO) {
             val existingErb = dao.getErbByIdentificacao(erb.identificacao)
-
             if (existingErb == null) {
                 val endereco = getAddressFromCoordinates(erb.latitude, erb.longitude)
                 val erbComEndereco = erb.copy(endereco = endereco)
@@ -42,28 +41,25 @@ class ErbRepository(private val dao: ErbAzimuthDao, private val context: Context
         }
     }
 
-    // --- NOVOS MÉTODOS PARA EXCLUSÃO ---
     suspend fun deleteErb(erb: Erb) {
-        withContext(Dispatchers.IO) {
-            Log.d("ErbAzimuthApp", "Repository: Excluindo ERB ${erb.identificacao}")
-            dao.deleteErb(erb)
-        }
+        withContext(Dispatchers.IO) { dao.deleteErb(erb) }
     }
 
     suspend fun deleteAzimute(azimute: Azimute) {
+        withContext(Dispatchers.IO) { dao.deleteAzimute(azimute) }
+    }
+
+    // --- NOVO MÉTODO PARA ATUALIZAÇÃO ---
+    suspend fun updateAzimute(azimute: Azimute) {
         withContext(Dispatchers.IO) {
-            Log.d("ErbAzimuthApp", "Repository: Excluindo Azimute ${azimute.descricao}")
-            dao.deleteAzimute(azimute)
+            Log.d("ErbAzimuthApp", "Repository: Atualizando Azimute ${azimute.descricao}")
+            dao.updateAzimute(azimute)
         }
     }
 
-
     private suspend fun getAddressFromCoordinates(lat: Double, lon: Double): String {
-        if (!Geocoder.isPresent()) {
-            return "Geocoder indisponível"
-        }
+        if (!Geocoder.isPresent()) { return "Geocoder indisponível" }
         val geocoder = Geocoder(context, Locale.getDefault())
-
         return try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 suspendCancellableCoroutine { continuation ->
@@ -73,10 +69,7 @@ class ErbRepository(private val dao: ErbAzimuthDao, private val context: Context
                                 .filter { s -> s.isNotBlank() }
                                 .joinToString(", ")
                         }?.ifBlank { "Endereço não encontrado" } ?: "Endereço não encontrado"
-
-                        if (continuation.isActive) {
-                            continuation.resume(addressText)
-                        }
+                        if (continuation.isActive) { continuation.resume(addressText) }
                     }
                 }
             } else {

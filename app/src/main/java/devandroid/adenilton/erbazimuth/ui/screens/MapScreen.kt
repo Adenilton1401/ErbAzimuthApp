@@ -29,24 +29,23 @@ import kotlinx.coroutines.launch
 @Composable
 fun MapScreen(viewModel: MapViewModel) {
     val erbsWithAzimutes by viewModel.erbsWithAzimutes.collectAsState()
-    val showDialog by viewModel.showAddErbDialog.collectAsState()
+    val isDialogVisible by viewModel.isDialogVisible.collectAsState()
+    val itemToProcess by viewModel.itemToProcess.collectAsState()
     val selectedItem by viewModel.selectedItem.collectAsState()
     val itemToDelete by viewModel.itemToDelete.collectAsState()
-    // NOVO: Observa a ERB de contexto para o diálogo
-    val erbForNewAzimuth by viewModel.erbForNewAzimuth.collectAsState()
+    val erbForDialogContext by viewModel.erbForDialogContext.collectAsState()
 
     val sheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-
-    if (showDialog) {
+    if (isDialogVisible) {
         AddErbDialog(
-            // ATUALIZADO: Passa a ERB para o diálogo, se houver
-            erbToUpdate = erbForNewAzimuth,
-            onDismiss = { viewModel.onDismissAddErbDialog() },
-            onConfirm = { erb, azimute ->
-                viewModel.addErbAndAzimuth(erb, azimute)
+            itemToProcess = itemToProcess,
+            erbForContext = erbForDialogContext,
+            onDismiss = { viewModel.onDismissDialog() },
+            onConfirm = { erb, azimute, azimuteToEdit ->
+                viewModel.onSave(erb, azimute, azimuteToEdit)
             }
         )
     }
@@ -61,7 +60,7 @@ fun MapScreen(viewModel: MapViewModel) {
 
     val brazilCenter = LatLng(-14.2350, -51.9253)
     val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(brazilCenter, 4f)
+        position = CameraPosition.fromLatLngZoom(brazilCenter, 5f)
     }
 
     LaunchedEffect(Unit) {
@@ -75,11 +74,11 @@ fun MapScreen(viewModel: MapViewModel) {
 
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton(onClick = { viewModel.onShowAddErbDialog() }) {
+            FloatingActionButton(onClick = { viewModel.onAddErbRequest() }) {
                 Icon(Icons.Filled.Add, contentDescription = "Adicionar ERB")
             }
         },
-        floatingActionButtonPosition = FabPosition.End
+        floatingActionButtonPosition = FabPosition.Start
     ) { paddingValues ->
         Box(modifier = Modifier.padding(paddingValues)) {
             GoogleMap(
@@ -89,24 +88,18 @@ fun MapScreen(viewModel: MapViewModel) {
                 erbsWithAzimutes.forEach { erbWithAzimutes ->
                     val erb = erbWithAzimutes.erb
                     val position = LatLng(erb.latitude, erb.longitude)
-
                     Marker(
                         state = MarkerState(position = position),
                         title = erb.identificacao,
                         snippet = erb.endereco ?: "Clique para ver detalhes",
-                        onClick = {
-                            viewModel.onItemSelected(erb)
-                            true
-                        }
+                        onClick = { viewModel.onItemSelected(erb); true }
                     )
-
                     erbWithAzimutes.azimutes.forEach { azimute ->
                         val sectorPoints = MapUtils.calculateAzimuthSectorPoints(
                             center = position,
                             radius = azimute.raio,
                             azimuth = azimute.azimute.toFloat()
                         )
-
                         if (sectorPoints.isNotEmpty()) {
                             Polygon(
                                 points = sectorPoints,
@@ -114,9 +107,7 @@ fun MapScreen(viewModel: MapViewModel) {
                                 strokeColor = Color(azimute.cor.toULong()),
                                 strokeWidth = 5f,
                                 clickable = true,
-                                onClick = {
-                                    viewModel.onItemSelected(azimute)
-                                }
+                                onClick = { viewModel.onItemSelected(azimute) }
                             )
                         }
                     }
@@ -139,24 +130,18 @@ fun MapScreen(viewModel: MapViewModel) {
                         }
                     }
                 },
-                onEditClick = {
-                    // TODO: Implementar lógica de edição
-                },
-                onDeleteClick = { item ->
-                    viewModel.onDeleteRequest(item)
-                },
+                onEditClick = { item -> viewModel.onEditRequest(item) },
+                onDeleteClick = { item -> viewModel.onDeleteRequest(item) },
                 onNavigateClick = { item ->
                     if (item is Erb) {
                         val gmmIntentUri = Uri.parse("google.navigation:q=${item.latitude},${item.longitude}")
                         val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
                         mapIntent.setPackage("com.google.android.apps.maps")
-
                         if (mapIntent.resolveActivity(context.packageManager) != null) {
                             context.startActivity(mapIntent)
                         }
                     }
                 },
-                // ATUALIZADO: Conecta o novo botão à sua função no ViewModel
                 onAddAzimuthClick = { erb ->
                     if (erb is Erb) {
                         viewModel.onAddAzimuthRequest(erb)

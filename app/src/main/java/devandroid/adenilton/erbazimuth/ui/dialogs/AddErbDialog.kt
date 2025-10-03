@@ -24,16 +24,26 @@ import devandroid.adenilton.erbazimuth.data.model.Erb
 
 @Composable
 fun AddErbDialog(
-    erbToUpdate: Erb? = null,
+    itemToProcess: Any? = null,
+    erbForContext: Erb? = null,
     onDismiss: () -> Unit,
-    onConfirm: (Erb, Azimute) -> Unit
+    onConfirm: (Erb, Azimute, Azimute?) -> Unit
 ) {
-    var erbId by rememberSaveable { mutableStateOf(erbToUpdate?.identificacao ?: "") }
-    var latitude by rememberSaveable { mutableStateOf(erbToUpdate?.latitude?.toString() ?: "") }
-    var longitude by rememberSaveable { mutableStateOf(erbToUpdate?.longitude?.toString() ?: "") }
-    var azimuteDesc by rememberSaveable { mutableStateOf("") }
-    var azimuteValor by rememberSaveable { mutableStateOf("") }
-    var raio by rememberSaveable { mutableStateOf("") }
+    val azimuteToEdit = itemToProcess as? Azimute
+    val isErbEditable = itemToProcess == null
+
+    val sourceErb = erbForContext ?: (itemToProcess as? Erb)
+    var erbId by rememberSaveable { mutableStateOf(sourceErb?.identificacao ?: "") }
+    var latitude by rememberSaveable { mutableStateOf(sourceErb?.latitude?.toString() ?: "") }
+    var longitude by rememberSaveable { mutableStateOf(sourceErb?.longitude?.toString() ?: "") }
+
+    var azimuteDesc by rememberSaveable { mutableStateOf(azimuteToEdit?.descricao ?: "") }
+    var azimuteValor by rememberSaveable { mutableStateOf(azimuteToEdit?.azimute?.toString() ?: "") }
+    var raio by rememberSaveable { mutableStateOf(azimuteToEdit?.raio?.toString() ?: "") }
+
+    val colors = listOf(Color.Red, Color.Blue, Color.Green, Color.Yellow, Color.Magenta, Color.Cyan)
+    val ColorSaver = Saver<Color, Long>(save = { it.value.toLong() }, restore = { Color(it.toULong()) })
+    var selectedColor by rememberSaveable(stateSaver = ColorSaver) { mutableStateOf(azimuteToEdit?.cor?.let { Color(it.toULong()) } ?: colors.first()) }
 
     var erbIdError by remember { mutableStateOf<String?>(null) }
     var latitudeError by remember { mutableStateOf<String?>(null) }
@@ -47,13 +57,8 @@ fun AddErbDialog(
     val azimuteFocusRequester = remember { FocusRequester() }
     val raioFocusRequester = remember { FocusRequester() }
 
-    val colors = listOf(Color.Red, Color.Blue, Color.Green, Color.Yellow, Color.Magenta, Color.Cyan)
-    val ColorSaver = Saver<Color, Long>(save = { it.value.toLong() }, restore = { Color(it.toULong()) })
-    var selectedColor by rememberSaveable(stateSaver = ColorSaver) { mutableStateOf(colors.first()) }
-
     fun validateAllFields(): Boolean {
-        // Valida os campos da ERB apenas se for uma nova ERB
-        if (erbToUpdate == null) {
+        if (isErbEditable) {
             if (erbId.isBlank()) { erbIdError = "Campo obrigatório"; erbIdFocusRequester.requestFocus(); return false }
             val latDouble = latitude.replace(',', '.').toDoubleOrNull()
             when {
@@ -68,15 +73,12 @@ fun AddErbDialog(
                 lonDouble !in -180.0..180.0 -> { longitudeError = "Intervalo: -180 a 180"; longitudeFocusRequester.requestFocus(); return false }
             }
         }
-
-        // Valida os campos do azimute em ambos os casos
         val raioDouble = raio.replace(',', '.').toDoubleOrNull()
         when {
             raio.isBlank() -> { raioError = "Campo obrigatório"; raioFocusRequester.requestFocus(); return false }
             raioDouble == null -> { raioError = "Valor inválido"; raioFocusRequester.requestFocus(); return false }
             raioDouble <= 0 -> { raioError = "Deve ser maior que zero"; raioFocusRequester.requestFocus(); return false }
         }
-
         val azimuteDouble = azimuteValor.replace(',', '.').toDoubleOrNull()
         when {
             azimuteValor.isBlank() -> { azimuteError = "Campo obrigatório"; azimuteFocusRequester.requestFocus(); return false }
@@ -88,30 +90,27 @@ fun AddErbDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (erbToUpdate == null) "Adicionar ERB e Azimute" else "Adicionar Novo Azimute") },
+        title = {
+            Text(
+                when {
+                    azimuteToEdit != null -> "Editar Azimute"
+                    sourceErb != null -> "Adicionar Novo Azimute"
+                    else -> "Adicionar ERB e Azimute"
+                }
+            )
+        },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = erbId,
-                        onValueChange = { erbId = it; erbIdError = null },
-                        label = { Text("Identificação da ERB") },
-                        isError = erbIdError != null,
-                        supportingText = { erbIdError?.let { Text(it) } },
-                        singleLine = true,
-                        enabled = erbToUpdate == null,
-                        modifier = Modifier.focusRequester(erbIdFocusRequester)
-                    )
-
+                    OutlinedTextField(value = erbId, onValueChange = { erbId = it; erbIdError = null }, label = { Text("Identificação da ERB") }, enabled = isErbEditable, isError = erbIdError != null, supportingText = { erbIdError?.let { Text(it) } }, modifier = Modifier.focusRequester(erbIdFocusRequester))
                     OutlinedTextField(
                         value = latitude,
                         onValueChange = { latitude = it; latitudeError = null },
                         label = { Text("Latitude (-90 a 90)") },
+                        enabled = isErbEditable,
                         isError = latitudeError != null,
                         supportingText = { latitudeError?.let { Text(it) } },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        enabled = erbToUpdate == null,
                         modifier = Modifier
                             .focusRequester(latitudeFocusRequester)
                             .onFocusChanged {
@@ -125,16 +124,14 @@ fun AddErbDialog(
                                 }
                             }
                     )
-
                     OutlinedTextField(
                         value = longitude,
                         onValueChange = { longitude = it; longitudeError = null },
                         label = { Text("Longitude (-180 a 180)") },
+                        enabled = isErbEditable,
                         isError = longitudeError != null,
                         supportingText = { longitudeError?.let { Text(it) } },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        enabled = erbToUpdate == null,
                         modifier = Modifier
                             .focusRequester(longitudeFocusRequester)
                             .onFocusChanged {
@@ -148,14 +145,7 @@ fun AddErbDialog(
                                 }
                             }
                     )
-
-                    OutlinedTextField(
-                        value = azimuteDesc,
-                        onValueChange = { azimuteDesc = it },
-                        label = { Text("Descrição do Azimute") },
-                        singleLine = true
-                    )
-
+                    OutlinedTextField(value = azimuteDesc, onValueChange = { azimuteDesc = it }, label = { Text("Descrição do Azimute") })
                     OutlinedTextField(
                         value = azimuteValor,
                         onValueChange = { azimuteValor = it; azimuteError = null },
@@ -163,7 +153,6 @@ fun AddErbDialog(
                         isError = azimuteError != null,
                         supportingText = { azimuteError?.let { Text(it) } },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
                         modifier = Modifier
                             .focusRequester(azimuteFocusRequester)
                             .onFocusChanged {
@@ -177,7 +166,6 @@ fun AddErbDialog(
                                 }
                             }
                     )
-
                     OutlinedTextField(
                         value = raio,
                         onValueChange = { raio = it; raioError = null },
@@ -185,7 +173,6 @@ fun AddErbDialog(
                         isError = raioError != null,
                         supportingText = { raioError?.let { Text(it) } },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
                         modifier = Modifier
                             .focusRequester(raioFocusRequester)
                             .onFocusChanged {
@@ -199,11 +186,10 @@ fun AddErbDialog(
                                 }
                             }
                     )
-
                     Text("Cor do Setor")
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         colors.forEach { color ->
-                            Box(modifier = Modifier.size(40.dp).background(color, CircleShape).border(width = 2.dp, color = if (selectedColor == color) Color.Black else Color.Transparent, shape = CircleShape).clickable { selectedColor = color })
+                            Box(modifier = Modifier.size(40.dp).background(color, CircleShape).border(2.dp, if (selectedColor == color) Color.Black else Color.Transparent, CircleShape).clickable { selectedColor = color })
                         }
                     }
                 }
@@ -213,18 +199,9 @@ fun AddErbDialog(
             Button(
                 onClick = {
                     if (validateAllFields()) {
-                        val erb = Erb(
-                            identificacao = erbId,
-                            latitude = latitude.replace(',', '.').toDouble(),
-                            longitude = longitude.replace(',', '.').toDouble()
-                        )
-                        val azimute = Azimute(
-                            descricao = azimuteDesc,
-                            azimute = azimuteValor.replace(',', '.').toDouble(),
-                            raio = raio.replace(',', '.').toDouble(),
-                            cor = selectedColor.value.toLong()
-                        )
-                        onConfirm(erb, azimute)
+                        val finalErb = Erb(identificacao = erbId, latitude = latitude.replace(',', '.').toDouble(), longitude = longitude.replace(',', '.').toDouble())
+                        val finalAzimute = azimuteToEdit?.copy(descricao = azimuteDesc, azimute = azimuteValor.replace(',', '.').toDouble(), raio = raio.replace(',', '.').toDouble(), cor = selectedColor.value.toLong()) ?: Azimute(descricao = azimuteDesc, azimute = azimuteValor.replace(',', '.').toDouble(), raio = raio.replace(',', '.').toDouble(), cor = selectedColor.value.toLong())
+                        onConfirm(finalErb, finalAzimute, azimuteToEdit)
                     }
                 }
             ) { Text("Salvar") }
