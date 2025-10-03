@@ -3,11 +3,10 @@ package devandroid.adenilton.erbazimuth.ui.sheets
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.LocationOn
-//import androidx.compose.material.icons.filled.Navigation
-//import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -24,8 +23,9 @@ fun ItemDetailsSheet(
     onDismiss: () -> Unit,
     onEditClick: (Any) -> Unit,
     onDeleteClick: (Any) -> Unit,
-    // NOVO PARÂMETRO: para a ação de navegação
-    onNavigateClick: (Erb) -> Unit
+    onNavigateClick: (Erb) -> Unit,
+    // NOVO PARÂMETRO: para a ação de adicionar azimute
+    onAddAzimuthClick: (Erb) -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -36,7 +36,6 @@ fun ItemDetailsSheet(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.fillMaxWidth()
         ) {
-            // Cabeçalho com o título e os botões de ação
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -47,10 +46,13 @@ fun ItemDetailsSheet(
                     style = MaterialTheme.typography.titleLarge
                 )
                 Row {
-                    // NOVO BOTÃO: Só aparece se o item for uma ERB
                     if (item is Erb) {
+                        // NOVO BOTÃO
+                        IconButton(onClick = { onAddAzimuthClick(item) }) {
+                            Icon(Icons.Default.AddCircle, contentDescription = "Adicionar Azimute")
+                        }
                         IconButton(onClick = { onNavigateClick(item) }) {
-                            Icon(Icons.Default.LocationOn, contentDescription = "Criar Rota")
+                            Icon(Icons.Default.Place, contentDescription = "Criar Rota")
                         }
                     }
                     IconButton(onClick = { onEditClick(item) }) {
@@ -64,19 +66,16 @@ fun ItemDetailsSheet(
 
             Divider(modifier = Modifier.padding(vertical = 8.dp))
 
-            // Corpo com os detalhes específicos do item
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.Start,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Usamos 'when' para mostrar os detalhes corretos para cada tipo de item
                 when (item) {
                     is Erb -> {
                         DetailItem("Identificação:", item.identificacao)
                         DetailItem("Latitude:", item.latitude.toString())
                         DetailItem("Longitude:", item.longitude.toString())
-                        // NOVO CAMPO: Exibe o endereço
                         DetailItem("Endereço:", item.endereco ?: "Buscando...")
                     }
                     is Azimute -> {
@@ -99,7 +98,6 @@ fun ItemDetailsSheet(
     }
 }
 
-// Componente auxiliar para mostrar um item de detalhe (Rótulo + Valor)
 @Composable
 private fun DetailItem(label: String, value: String) {
     Row(modifier = Modifier.fillMaxWidth()) {

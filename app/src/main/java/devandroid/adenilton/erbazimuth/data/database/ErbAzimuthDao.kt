@@ -1,10 +1,6 @@
 package devandroid.adenilton.erbazimuth.data.database
 
-import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.Query
-import androidx.room.Transaction
+import androidx.room.*
 import devandroid.adenilton.erbazimuth.data.model.Azimute
 import devandroid.adenilton.erbazimuth.data.model.Erb
 import devandroid.adenilton.erbazimuth.data.model.ErbWithAzimutes
@@ -13,7 +9,6 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface ErbAzimuthDao {
 
-    // A anotação @Transaction garante a consistência ao buscar a ERB e seus azimutes.
     @Transaction
     @Query("SELECT * FROM erbs")
     fun getAllErbsWithAzimutes(): Flow<List<ErbWithAzimutes>>
@@ -26,5 +21,12 @@ interface ErbAzimuthDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAzimute(azimute: Azimute)
+
+    // --- NOVOS MÉTODOS PARA EXCLUSÃO ---
+    @Delete
+    suspend fun deleteErb(erb: Erb)
+
+    @Delete
+    suspend fun deleteAzimute(azimute: Azimute)
 }
 

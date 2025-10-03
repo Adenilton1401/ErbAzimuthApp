@@ -24,86 +24,71 @@ import devandroid.adenilton.erbazimuth.data.model.Erb
 
 @Composable
 fun AddErbDialog(
+    erbToUpdate: Erb? = null,
     onDismiss: () -> Unit,
     onConfirm: (Erb, Azimute) -> Unit
 ) {
-    // --- GERENCIAMENTO DE ESTADO COM rememberSaveable ---
-    var erbId by rememberSaveable { mutableStateOf("") }
-    var latitude by rememberSaveable { mutableStateOf("") }
-    var longitude by rememberSaveable { mutableStateOf("") }
+    var erbId by rememberSaveable { mutableStateOf(erbToUpdate?.identificacao ?: "") }
+    var latitude by rememberSaveable { mutableStateOf(erbToUpdate?.latitude?.toString() ?: "") }
+    var longitude by rememberSaveable { mutableStateOf(erbToUpdate?.longitude?.toString() ?: "") }
     var azimuteDesc by rememberSaveable { mutableStateOf("") }
     var azimuteValor by rememberSaveable { mutableStateOf("") }
     var raio by rememberSaveable { mutableStateOf("") }
 
-    // --- ESTADO PARA CONTROLE DE ERROS ---
     var erbIdError by remember { mutableStateOf<String?>(null) }
     var latitudeError by remember { mutableStateOf<String?>(null) }
     var longitudeError by remember { mutableStateOf<String?>(null) }
     var azimuteError by remember { mutableStateOf<String?>(null) }
     var raioError by remember { mutableStateOf<String?>(null) }
 
-    // --- CONTROLE DE FOCO ---
     val erbIdFocusRequester = remember { FocusRequester() }
     val latitudeFocusRequester = remember { FocusRequester() }
     val longitudeFocusRequester = remember { FocusRequester() }
     val azimuteFocusRequester = remember { FocusRequester() }
     val raioFocusRequester = remember { FocusRequester() }
 
-
     val colors = listOf(Color.Red, Color.Blue, Color.Green, Color.Yellow, Color.Magenta, Color.Cyan)
-
-    // --- CORREÇÃO: Saver customizado para o tipo Color, salvando como Long ---
-    val ColorSaver = Saver<Color, Long>(
-        save = { it.value.toLong() }, // Salva a cor como um Long
-        restore = { Color(it.toULong()) } // Restaura o Long (convertido para ULong) para uma cor
-    )
-
-    // A cor selecionada é salva usando o Saver customizado.
+    val ColorSaver = Saver<Color, Long>(save = { it.value.toLong() }, restore = { Color(it.toULong()) })
     var selectedColor by rememberSaveable(stateSaver = ColorSaver) { mutableStateOf(colors.first()) }
 
-    // --- FUNÇÕES DE VALIDAÇÃO (sem alterações) ---
     fun validateAllFields(): Boolean {
-        // Valida ID
-        if (erbId.isBlank()) {
-            erbIdError = "Campo obrigatório"
-            erbIdFocusRequester.requestFocus()
-            return false
+        // Valida os campos da ERB apenas se for uma nova ERB
+        if (erbToUpdate == null) {
+            if (erbId.isBlank()) { erbIdError = "Campo obrigatório"; erbIdFocusRequester.requestFocus(); return false }
+            val latDouble = latitude.replace(',', '.').toDoubleOrNull()
+            when {
+                latitude.isBlank() -> { latitudeError = "Campo obrigatório"; latitudeFocusRequester.requestFocus(); return false }
+                latDouble == null -> { latitudeError = "Valor inválido"; latitudeFocusRequester.requestFocus(); return false }
+                latDouble !in -90.0..90.0 -> { latitudeError = "Intervalo: -90 a 90"; latitudeFocusRequester.requestFocus(); return false }
+            }
+            val lonDouble = longitude.replace(',', '.').toDoubleOrNull()
+            when {
+                longitude.isBlank() -> { longitudeError = "Campo obrigatório"; longitudeFocusRequester.requestFocus(); return false }
+                lonDouble == null -> { longitudeError = "Valor inválido"; longitudeFocusRequester.requestFocus(); return false }
+                lonDouble !in -180.0..180.0 -> { longitudeError = "Intervalo: -180 a 180"; longitudeFocusRequester.requestFocus(); return false }
+            }
         }
 
-        // Valida Latitude
-        val latDouble = latitude.replace(',', '.').toDoubleOrNull()
-        when {
-            latDouble == null -> { latitudeError = "Valor inválido"; latitudeFocusRequester.requestFocus(); return false }
-            latDouble !in -90.0..90.0 -> { latitudeError = "Valor deve ser entre -90 e 90"; latitudeFocusRequester.requestFocus(); return false }
-        }
-
-        // Valida Longitude
-        val lonDouble = longitude.replace(',', '.').toDoubleOrNull()
-        when {
-            lonDouble == null -> { longitudeError = "Valor inválido"; longitudeFocusRequester.requestFocus(); return false }
-            lonDouble !in -180.0..180.0 -> { longitudeError = "Valor deve ser entre -180 e 180"; longitudeFocusRequester.requestFocus(); return false }
-        }
-
-        // Valida Raio
+        // Valida os campos do azimute em ambos os casos
         val raioDouble = raio.replace(',', '.').toDoubleOrNull()
         when {
+            raio.isBlank() -> { raioError = "Campo obrigatório"; raioFocusRequester.requestFocus(); return false }
             raioDouble == null -> { raioError = "Valor inválido"; raioFocusRequester.requestFocus(); return false }
             raioDouble <= 0 -> { raioError = "Deve ser maior que zero"; raioFocusRequester.requestFocus(); return false }
         }
 
-        // Valida Azimute
         val azimuteDouble = azimuteValor.replace(',', '.').toDoubleOrNull()
         when {
+            azimuteValor.isBlank() -> { azimuteError = "Campo obrigatório"; azimuteFocusRequester.requestFocus(); return false }
             azimuteDouble == null -> { azimuteError = "Valor inválido"; azimuteFocusRequester.requestFocus(); return false }
-            azimuteDouble !in 0.0..360.0 -> { azimuteError = "Valor deve ser entre 0 e 360"; azimuteFocusRequester.requestFocus(); return false }
+            azimuteDouble !in 0.0..360.0 -> { azimuteError = "Intervalo: 0 a 360"; azimuteFocusRequester.requestFocus(); return false }
         }
         return true
     }
 
-
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Adicionar ERB e Azimute") },
+        title = { Text(if (erbToUpdate == null) "Adicionar ERB e Azimute" else "Adicionar Novo Azimute") },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -114,6 +99,7 @@ fun AddErbDialog(
                         isError = erbIdError != null,
                         supportingText = { erbIdError?.let { Text(it) } },
                         singleLine = true,
+                        enabled = erbToUpdate == null,
                         modifier = Modifier.focusRequester(erbIdFocusRequester)
                     )
 
@@ -125,6 +111,7 @@ fun AddErbDialog(
                         supportingText = { latitudeError?.let { Text(it) } },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
+                        enabled = erbToUpdate == null,
                         modifier = Modifier
                             .focusRequester(latitudeFocusRequester)
                             .onFocusChanged {
@@ -147,6 +134,7 @@ fun AddErbDialog(
                         supportingText = { longitudeError?.let { Text(it) } },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
+                        enabled = erbToUpdate == null,
                         modifier = Modifier
                             .focusRequester(longitudeFocusRequester)
                             .onFocusChanged {
@@ -215,17 +203,7 @@ fun AddErbDialog(
                     Text("Cor do Setor")
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         colors.forEach { color ->
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .background(color, CircleShape)
-                                    .border(
-                                        width = 2.dp,
-                                        color = if (selectedColor == color) Color.Black else Color.Transparent,
-                                        shape = CircleShape
-                                    )
-                                    .clickable { selectedColor = color }
-                            )
+                            Box(modifier = Modifier.size(40.dp).background(color, CircleShape).border(width = 2.dp, color = if (selectedColor == color) Color.Black else Color.Transparent, shape = CircleShape).clickable { selectedColor = color })
                         }
                     }
                 }
@@ -244,20 +222,15 @@ fun AddErbDialog(
                             descricao = azimuteDesc,
                             azimute = azimuteValor.replace(',', '.').toDouble(),
                             raio = raio.replace(',', '.').toDouble(),
-                            // CORREÇÃO: Converte o valor da cor para Long
                             cor = selectedColor.value.toLong()
                         )
                         onConfirm(erb, azimute)
                     }
                 }
-            ) {
-                Text("Salvar")
-            }
+            ) { Text("Salvar") }
         },
         dismissButton = {
-            Button(onClick = onDismiss) {
-                Text("Cancelar")
-            }
+            Button(onClick = onDismiss) { Text("Cancelar") }
         }
     )
 }

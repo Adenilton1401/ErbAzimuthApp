@@ -18,6 +18,7 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
 import devandroid.adenilton.erbazimuth.data.model.Erb
 import devandroid.adenilton.erbazimuth.ui.dialogs.AddErbDialog
+import devandroid.adenilton.erbazimuth.ui.dialogs.ConfirmDeleteDialog
 import devandroid.adenilton.erbazimuth.ui.sheets.ItemDetailsSheet
 import devandroid.adenilton.erbazimuth.ui.viewmodel.MapViewModel
 import devandroid.adenilton.erbazimuth.utils.MapUtils
@@ -30,18 +31,31 @@ fun MapScreen(viewModel: MapViewModel) {
     val erbsWithAzimutes by viewModel.erbsWithAzimutes.collectAsState()
     val showDialog by viewModel.showAddErbDialog.collectAsState()
     val selectedItem by viewModel.selectedItem.collectAsState()
+    val itemToDelete by viewModel.itemToDelete.collectAsState()
+    // NOVO: Observa a ERB de contexto para o diálogo
+    val erbForNewAzimuth by viewModel.erbForNewAzimuth.collectAsState()
+
     val sheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
-    // NOVO: Pega o contexto atual para usar na Intent de navegação
     val context = LocalContext.current
 
 
     if (showDialog) {
         AddErbDialog(
+            // ATUALIZADO: Passa a ERB para o diálogo, se houver
+            erbToUpdate = erbForNewAzimuth,
             onDismiss = { viewModel.onDismissAddErbDialog() },
             onConfirm = { erb, azimute ->
                 viewModel.addErbAndAzimuth(erb, azimute)
             }
+        )
+    }
+
+    if (itemToDelete != null) {
+        ConfirmDeleteDialog(
+            itemToDelete = itemToDelete!!,
+            onDismiss = { viewModel.onDismissDelete() },
+            onConfirm = { viewModel.onConfirmDelete() }
         )
     }
 
@@ -65,7 +79,7 @@ fun MapScreen(viewModel: MapViewModel) {
                 Icon(Icons.Filled.Add, contentDescription = "Adicionar ERB")
             }
         },
-        floatingActionButtonPosition = FabPosition.Start
+        floatingActionButtonPosition = FabPosition.End
     ) { paddingValues ->
         Box(modifier = Modifier.padding(paddingValues)) {
             GoogleMap(
@@ -79,7 +93,6 @@ fun MapScreen(viewModel: MapViewModel) {
                     Marker(
                         state = MarkerState(position = position),
                         title = erb.identificacao,
-                        // ATUALIZADO: Mostra o endereço no snippet do marcador
                         snippet = erb.endereco ?: "Clique para ver detalhes",
                         onClick = {
                             viewModel.onItemSelected(erb)
@@ -129,21 +142,24 @@ fun MapScreen(viewModel: MapViewModel) {
                 onEditClick = {
                     // TODO: Implementar lógica de edição
                 },
-                onDeleteClick = {
-                    // TODO: Implementar lógica de exclusão
+                onDeleteClick = { item ->
+                    viewModel.onDeleteRequest(item)
                 },
-                // NOVO: Implementação da lógica de navegação
                 onNavigateClick = { item ->
                     if (item is Erb) {
-                        // Cria a URI para a navegação do Google Maps
                         val gmmIntentUri = Uri.parse("google.navigation:q=${item.latitude},${item.longitude}")
                         val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
                         mapIntent.setPackage("com.google.android.apps.maps")
 
-                        // Verifica se o Google Maps está instalado antes de tentar abrir
                         if (mapIntent.resolveActivity(context.packageManager) != null) {
                             context.startActivity(mapIntent)
                         }
+                    }
+                },
+                // ATUALIZADO: Conecta o novo botão à sua função no ViewModel
+                onAddAzimuthClick = { erb ->
+                    if (erb is Erb) {
+                        viewModel.onAddAzimuthRequest(erb)
                     }
                 }
             )
