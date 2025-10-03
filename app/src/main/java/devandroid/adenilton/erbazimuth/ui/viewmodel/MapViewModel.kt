@@ -14,7 +14,6 @@ class MapViewModel(private val repository: ErbRepository) : ViewModel() {
     private val _erbsWithAzimutes = MutableStateFlow<List<ErbWithAzimutes>>(emptyList())
     val erbsWithAzimutes: StateFlow<List<ErbWithAzimutes>> = _erbsWithAzimutes.asStateFlow()
 
-    // --- ESTADOS REATORADOS PARA MAIOR CLAREZA ---
     private val _dialogState = MutableStateFlow<DialogState>(DialogState.Hidden)
     val dialogState: StateFlow<DialogState> = _dialogState.asStateFlow()
 
@@ -31,7 +30,6 @@ class MapViewModel(private val repository: ErbRepository) : ViewModel() {
         viewModelScope.launch { repository.getAllErbsWithAzimutes().collect { _erbsWithAzimutes.value = it } }
     }
 
-    // --- FUNÇÕES DE CONTROLE DOS DIÁLOGOS ---
     fun onAddErbRequest() { _dialogState.value = DialogState.AddErbAndAzimuth }
     fun onAddAzimuthRequest(erb: Erb) { _selectedItem.value = null; _dialogState.value = DialogState.AddAzimuth(erb) }
     fun onEditRequest(item: Any) {
@@ -47,7 +45,6 @@ class MapViewModel(private val repository: ErbRepository) : ViewModel() {
     }
     fun onDismissDialog() { _dialogState.value = DialogState.Hidden }
 
-    // --- FUNÇÕES DE CONFIRMAÇÃO ---
     fun onConfirmAdd(erb: Erb, azimute: Azimute) {
         viewModelScope.launch {
             val newErbId = repository.insertErbAndAzimuth(erb, azimute)
@@ -56,17 +53,21 @@ class MapViewModel(private val repository: ErbRepository) : ViewModel() {
         }
     }
 
+    // --- FUNÇÃO ATUALIZADA ---
     fun onConfirmEdit(item: Any) {
         viewModelScope.launch {
             when (item) {
-                is Erb -> repository.updateErb(item)
+                is Erb -> {
+                    repository.updateErb(item)
+                    // Dispara o evento para que a câmera siga a ERB editada
+                    _newErbEvent.emit(LatLng(item.latitude, item.longitude))
+                }
                 is Azimute -> repository.updateAzimute(item)
             }
             onDismissDialog()
         }
     }
 
-    // --- LÓGICA DE EXCLUSÃO (sem alterações) ---
     fun onDeleteRequest(item: Any) { _itemToDelete.value = item }
     fun onConfirmDelete() {
         viewModelScope.launch {
@@ -84,7 +85,7 @@ class MapViewModel(private val repository: ErbRepository) : ViewModel() {
     fun onDismissDetails() { _selectedItem.value = null }
 }
 
-// NOVO: Classe selada para representar os diferentes estados do diálogo
+// Classe selada para representar os diferentes estados do diálogo
 sealed class DialogState {
     object Hidden : DialogState()
     object AddErbAndAzimuth : DialogState()

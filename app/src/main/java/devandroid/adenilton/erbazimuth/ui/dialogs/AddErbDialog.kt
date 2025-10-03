@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -41,7 +43,18 @@ fun AddErbDialog(
     var azimuteValor by rememberSaveable { mutableStateOf(azimuteToEdit?.azimute?.toString() ?: "") }
     var raio by rememberSaveable { mutableStateOf(azimuteToEdit?.raio?.toString() ?: "") }
 
-    val colors = listOf(Color.Red, Color.Blue, Color.Green, Color.Yellow, Color.Magenta, Color.Cyan)
+    val colors = remember {
+        listOf(
+            Color.Red, Color.Blue, Color.Green, Color.Yellow, Color.Magenta, Color.Cyan,
+            Color(0xFFFFA500), // Laranja
+            Color(0xFF800080), // Roxo
+            Color(0xFF008080), // Teal
+            Color(0xFFD2691E), // Chocolate
+            Color(0xFF4682B4), // SteelBlue
+            Color(0xFFDC143C)  // Crimson
+        )
+    }
+
     val ColorSaver = Saver<Color, Long>(save = { it.value.toLong() }, restore = { Color(it.toULong()) })
     var selectedColor by rememberSaveable(stateSaver = ColorSaver) { mutableStateOf(azimuteToEdit?.cor?.let { Color(it.toULong()) } ?: colors.first()) }
 
@@ -56,6 +69,19 @@ fun AddErbDialog(
     val longitudeFocusRequester = remember { FocusRequester() }
     val azimuteFocusRequester = remember { FocusRequester() }
     val raioFocusRequester = remember { FocusRequester() }
+
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(Unit) {
+        val middleIndex = Int.MAX_VALUE / 2
+        val initialColorIndex = colors.indexOf(selectedColor)
+        val targetIndex = if (initialColorIndex != -1) {
+            middleIndex - (middleIndex % colors.size) + initialColorIndex
+        } else {
+            middleIndex
+        }
+        listState.scrollToItem(targetIndex)
+    }
 
     fun validateAllFields(): Boolean {
         if (isErbEditable) {
@@ -187,9 +213,24 @@ fun AddErbDialog(
                             }
                     )
                     Text("Cor do Setor")
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        colors.forEach { color ->
-                            Box(modifier = Modifier.size(40.dp).background(color, CircleShape).border(2.dp, if (selectedColor == color) Color.Black else Color.Transparent, CircleShape).clickable { selectedColor = color })
+                    LazyRow(
+                        state = listState,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items(Int.MAX_VALUE) { index ->
+                            val color = colors[index % colors.size]
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .background(color, CircleShape)
+                                    .border(
+                                        width = 3.dp,
+                                        color = if (selectedColor == color) MaterialTheme.colorScheme.onSurface else Color.Transparent,
+                                        shape = CircleShape
+                                    )
+                                    .clickable { selectedColor = color }
+                            )
                         }
                     }
                 }
@@ -199,8 +240,22 @@ fun AddErbDialog(
             Button(
                 onClick = {
                     if (validateAllFields()) {
-                        val finalErb = Erb(identificacao = erbId, latitude = latitude.replace(',', '.').toDouble(), longitude = longitude.replace(',', '.').toDouble())
-                        val finalAzimute = azimuteToEdit?.copy(descricao = azimuteDesc, azimute = azimuteValor.replace(',', '.').toDouble(), raio = raio.replace(',', '.').toDouble(), cor = selectedColor.value.toLong()) ?: Azimute(descricao = azimuteDesc, azimute = azimuteValor.replace(',', '.').toDouble(), raio = raio.replace(',', '.').toDouble(), cor = selectedColor.value.toLong())
+                        val finalErb = Erb(
+                            identificacao = erbId,
+                            latitude = latitude.replace(',', '.').toDouble(),
+                            longitude = longitude.replace(',', '.').toDouble()
+                        )
+                        val finalAzimute = azimuteToEdit?.copy(
+                            descricao = azimuteDesc,
+                            azimute = azimuteValor.replace(',', '.').toDouble(),
+                            raio = raio.replace(',', '.').toDouble(),
+                            cor = selectedColor.value.toLong()
+                        ) ?: Azimute(
+                            descricao = azimuteDesc,
+                            azimute = azimuteValor.replace(',', '.').toDouble(),
+                            raio = raio.replace(',', '.').toDouble(),
+                            cor = selectedColor.value.toLong()
+                        )
                         onConfirm(finalErb, finalAzimute, azimuteToEdit)
                     }
                 }
