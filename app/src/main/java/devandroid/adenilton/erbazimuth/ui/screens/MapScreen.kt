@@ -19,7 +19,9 @@ import com.google.maps.android.compose.*
 import devandroid.adenilton.erbazimuth.data.model.Erb
 import devandroid.adenilton.erbazimuth.ui.dialogs.AddErbDialog
 import devandroid.adenilton.erbazimuth.ui.dialogs.ConfirmDeleteDialog
+import devandroid.adenilton.erbazimuth.ui.dialogs.EditErbDialog
 import devandroid.adenilton.erbazimuth.ui.sheets.ItemDetailsSheet
+import devandroid.adenilton.erbazimuth.ui.viewmodel.DialogState
 import devandroid.adenilton.erbazimuth.ui.viewmodel.MapViewModel
 import devandroid.adenilton.erbazimuth.utils.MapUtils
 import kotlinx.coroutines.flow.collectLatest
@@ -29,26 +31,48 @@ import kotlinx.coroutines.launch
 @Composable
 fun MapScreen(viewModel: MapViewModel) {
     val erbsWithAzimutes by viewModel.erbsWithAzimutes.collectAsState()
-    val isDialogVisible by viewModel.isDialogVisible.collectAsState()
-    val itemToProcess by viewModel.itemToProcess.collectAsState()
+    val dialogState by viewModel.dialogState.collectAsState()
     val selectedItem by viewModel.selectedItem.collectAsState()
     val itemToDelete by viewModel.itemToDelete.collectAsState()
-    val erbForDialogContext by viewModel.erbForDialogContext.collectAsState()
 
     val sheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    if (isDialogVisible) {
-        AddErbDialog(
-            itemToProcess = itemToProcess,
-            erbForContext = erbForDialogContext,
-            onDismiss = { viewModel.onDismissDialog() },
-            onConfirm = { erb, azimute, azimuteToEdit ->
-                viewModel.onSave(erb, azimute, azimuteToEdit)
-            }
-        )
+    // --- LÓGICA ATUALIZADA PARA MOSTRAR O DIÁLOGO CORRETO ---
+    when (val state = dialogState) {
+        is DialogState.AddErbAndAzimuth -> {
+            AddErbDialog(
+                onDismiss = { viewModel.onDismissDialog() },
+                onConfirm = { erb, azimute, _ -> viewModel.onConfirmAdd(erb, azimute) }
+            )
+        }
+        is DialogState.AddAzimuth -> {
+            AddErbDialog(
+                itemToProcess = state.erb,
+                erbForContext = state.erb,
+                onDismiss = { viewModel.onDismissDialog() },
+                onConfirm = { erb, azimute, _ -> viewModel.onConfirmAdd(erb, azimute) }
+            )
+        }
+        is DialogState.EditErb -> {
+            EditErbDialog(
+                erbToEdit = state.erb,
+                onDismiss = { viewModel.onDismissDialog() },
+                onConfirm = { updatedErb -> viewModel.onConfirmEdit(updatedErb) }
+            )
+        }
+        is DialogState.EditAzimuth -> {
+            AddErbDialog(
+                itemToProcess = state.azimute,
+                erbForContext = state.parentErb,
+                onDismiss = { viewModel.onDismissDialog() },
+                onConfirm = { _, updatedAzimute, _ -> viewModel.onConfirmEdit(updatedAzimute) }
+            )
+        }
+        DialogState.Hidden -> { /* Não faz nada */ }
     }
+
 
     if (itemToDelete != null) {
         ConfirmDeleteDialog(
@@ -59,16 +83,11 @@ fun MapScreen(viewModel: MapViewModel) {
     }
 
     val brazilCenter = LatLng(-14.2350, -51.9253)
-    val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(brazilCenter, 5f)
-    }
+    val cameraPositionState = rememberCameraPositionState { position = CameraPosition.fromLatLngZoom(brazilCenter, 4f) }
 
     LaunchedEffect(Unit) {
         viewModel.newErbEvent.collectLatest { newErbLocation ->
-            cameraPositionState.animate(
-                update = CameraUpdateFactory.newLatLngZoom(newErbLocation, 15f),
-                durationMs = 1000
-            )
+            cameraPositionState.animate(update = CameraUpdateFactory.newLatLngZoom(newErbLocation, 15f), durationMs = 1000)
         }
     }
 
@@ -78,13 +97,10 @@ fun MapScreen(viewModel: MapViewModel) {
                 Icon(Icons.Filled.Add, contentDescription = "Adicionar ERB")
             }
         },
-        floatingActionButtonPosition = FabPosition.Start
+        floatingActionButtonPosition = FabPosition.End
     ) { paddingValues ->
         Box(modifier = Modifier.padding(paddingValues)) {
-            GoogleMap(
-                modifier = Modifier.fillMaxSize(),
-                cameraPositionState = cameraPositionState
-            ) {
+            GoogleMap(modifier = Modifier.fillMaxSize(), cameraPositionState = cameraPositionState) {
                 erbsWithAzimutes.forEach { erbWithAzimutes ->
                     val erb = erbWithAzimutes.erb
                     val position = LatLng(erb.latitude, erb.longitude)
@@ -95,20 +111,9 @@ fun MapScreen(viewModel: MapViewModel) {
                         onClick = { viewModel.onItemSelected(erb); true }
                     )
                     erbWithAzimutes.azimutes.forEach { azimute ->
-                        val sectorPoints = MapUtils.calculateAzimuthSectorPoints(
-                            center = position,
-                            radius = azimute.raio,
-                            azimuth = azimute.azimute.toFloat()
-                        )
+                        val sectorPoints = MapUtils.calculateAzimuthSectorPoints(center = position, radius = azimute.raio, azimuth = azimute.azimute.toFloat())
                         if (sectorPoints.isNotEmpty()) {
-                            Polygon(
-                                points = sectorPoints,
-                                fillColor = Color(azimute.cor.toULong()).copy(alpha = 0.5f),
-                                strokeColor = Color(azimute.cor.toULong()),
-                                strokeWidth = 5f,
-                                clickable = true,
-                                onClick = { viewModel.onItemSelected(azimute) }
-                            )
+                            Polygon(points = sectorPoints, fillColor = Color(azimute.cor.toULong()).copy(alpha = 0.5f), strokeColor = Color(azimute.cor.toULong()), strokeWidth = 5f, clickable = true, onClick = { viewModel.onItemSelected(azimute) })
                         }
                     }
                 }
@@ -117,36 +122,20 @@ fun MapScreen(viewModel: MapViewModel) {
     }
 
     if (selectedItem != null) {
-        ModalBottomSheet(
-            onDismissRequest = { viewModel.onDismissDetails() },
-            sheetState = sheetState
-        ) {
+        ModalBottomSheet(onDismissRequest = { viewModel.onDismissDetails() }, sheetState = sheetState) {
             ItemDetailsSheet(
                 item = selectedItem!!,
-                onDismiss = {
-                    scope.launch { sheetState.hide() }.invokeOnCompletion {
-                        if (!sheetState.isVisible) {
-                            viewModel.onDismissDetails()
-                        }
-                    }
-                },
+                onDismiss = { scope.launch { sheetState.hide() }.invokeOnCompletion { if (!sheetState.isVisible) { viewModel.onDismissDetails() } } },
                 onEditClick = { item -> viewModel.onEditRequest(item) },
                 onDeleteClick = { item -> viewModel.onDeleteRequest(item) },
-                onNavigateClick = { item ->
-                    if (item is Erb) {
-                        val gmmIntentUri = Uri.parse("google.navigation:q=${item.latitude},${item.longitude}")
-                        val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
-                        mapIntent.setPackage("com.google.android.apps.maps")
-                        if (mapIntent.resolveActivity(context.packageManager) != null) {
-                            context.startActivity(mapIntent)
-                        }
-                    }
-                },
-                onAddAzimuthClick = { erb ->
-                    if (erb is Erb) {
-                        viewModel.onAddAzimuthRequest(erb)
-                    }
+                onNavigateClick = { item -> if (item is Erb) {
+                    val gmmIntentUri = Uri.parse("google.navigation:q=${item.latitude},${item.longitude}")
+                    val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
+                    mapIntent.setPackage("com.google.android.apps.maps")
+                    if (mapIntent.resolveActivity(context.packageManager) != null) { context.startActivity(mapIntent) }
                 }
+                },
+                onAddAzimuthClick = { erb -> if (erb is Erb) { viewModel.onAddAzimuthRequest(erb) } }
             )
         }
     }

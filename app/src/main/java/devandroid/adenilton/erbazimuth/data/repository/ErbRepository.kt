@@ -18,9 +18,7 @@ import kotlin.coroutines.resume
 
 class ErbRepository(private val dao: ErbAzimuthDao, private val context: Context) {
 
-    fun getAllErbsWithAzimutes(): Flow<List<ErbWithAzimutes>> {
-        return dao.getAllErbsWithAzimutes()
-    }
+    fun getAllErbsWithAzimutes(): Flow<List<ErbWithAzimutes>> = dao.getAllErbsWithAzimutes()
 
     suspend fun insertErbAndAzimuth(erb: Erb, azimute: Azimute): Long {
         return withContext(Dispatchers.IO) {
@@ -41,19 +39,18 @@ class ErbRepository(private val dao: ErbAzimuthDao, private val context: Context
         }
     }
 
-    suspend fun deleteErb(erb: Erb) {
-        withContext(Dispatchers.IO) { dao.deleteErb(erb) }
-    }
+    suspend fun deleteErb(erb: Erb) { withContext(Dispatchers.IO) { dao.deleteErb(erb) } }
+    suspend fun deleteAzimute(azimute: Azimute) { withContext(Dispatchers.IO) { dao.deleteAzimute(azimute) } }
+    suspend fun updateAzimute(azimute: Azimute) { withContext(Dispatchers.IO) { dao.updateAzimute(azimute) } }
 
-    suspend fun deleteAzimute(azimute: Azimute) {
-        withContext(Dispatchers.IO) { dao.deleteAzimute(azimute) }
-    }
-
-    // --- NOVO MÉTODO PARA ATUALIZAÇÃO ---
-    suspend fun updateAzimute(azimute: Azimute) {
+    // --- NOVO MÉTOD PARA ATUALIZAÇÃO DA ERB ---
+    suspend fun updateErb(erb: Erb) {
         withContext(Dispatchers.IO) {
-            Log.d("ErbAzimuthApp", "Repository: Atualizando Azimute ${azimute.descricao}")
-            dao.updateAzimute(azimute)
+            Log.d("ErbAzimuthApp", "Repository: Atualizando ERB ${erb.identificacao}")
+            // Re-busca o endereço caso as coordenadas tenham sido alteradas
+            val endereco = getAddressFromCoordinates(erb.latitude, erb.longitude)
+            val erbComEndereco = erb.copy(endereco = endereco)
+            dao.updateErb(erbComEndereco)
         }
     }
 

@@ -14,14 +14,9 @@ class MapViewModel(private val repository: ErbRepository) : ViewModel() {
     private val _erbsWithAzimutes = MutableStateFlow<List<ErbWithAzimutes>>(emptyList())
     val erbsWithAzimutes: StateFlow<List<ErbWithAzimutes>> = _erbsWithAzimutes.asStateFlow()
 
-    private val _itemToProcess = MutableStateFlow<Any?>(null)
-    val itemToProcess: StateFlow<Any?> = _itemToProcess.asStateFlow()
-
-    private val _isDialogVisible = MutableStateFlow(false)
-    val isDialogVisible: StateFlow<Boolean> = _isDialogVisible.asStateFlow()
-
-    private val _erbForDialogContext = MutableStateFlow<Erb?>(null)
-    val erbForDialogContext: StateFlow<Erb?> = _erbForDialogContext.asStateFlow()
+    // --- ESTADOS REATORADOS PARA MAIOR CLAREZA ---
+    private val _dialogState = MutableStateFlow<DialogState>(DialogState.Hidden)
+    val dialogState: StateFlow<DialogState> = _dialogState.asStateFlow()
 
     private val _newErbEvent = MutableSharedFlow<LatLng>()
     val newErbEvent: SharedFlow<LatLng> = _newErbEvent.asSharedFlow()
@@ -36,55 +31,43 @@ class MapViewModel(private val repository: ErbRepository) : ViewModel() {
         viewModelScope.launch { repository.getAllErbsWithAzimutes().collect { _erbsWithAzimutes.value = it } }
     }
 
-    fun onSave(erb: Erb, azimute: Azimute, azimuteToEdit: Azimute?) {
+    // --- FUNÇÕES DE CONTROLE DOS DIÁLOGOS ---
+    fun onAddErbRequest() { _dialogState.value = DialogState.AddErbAndAzimuth }
+    fun onAddAzimuthRequest(erb: Erb) { _selectedItem.value = null; _dialogState.value = DialogState.AddAzimuth(erb) }
+    fun onEditRequest(item: Any) {
+        _selectedItem.value = null
+        _dialogState.value = when(item) {
+            is Erb -> DialogState.EditErb(item)
+            is Azimute -> {
+                val parentErb = _erbsWithAzimutes.value.find { it.azimutes.any { az -> az.id == item.id } }?.erb
+                if (parentErb != null) DialogState.EditAzimuth(item, parentErb) else DialogState.Hidden
+            }
+            else -> DialogState.Hidden
+        }
+    }
+    fun onDismissDialog() { _dialogState.value = DialogState.Hidden }
+
+    // --- FUNÇÕES DE CONFIRMAÇÃO ---
+    fun onConfirmAdd(erb: Erb, azimute: Azimute) {
         viewModelScope.launch {
-            if (azimuteToEdit != null) {
-                repository.updateAzimute(azimute)
-            } else {
-                val newErbId = repository.insertErbAndAzimuth(erb, azimute)
-                if (newErbId != -1L) {
-                    _newErbEvent.emit(LatLng(erb.latitude, erb.longitude))
-                }
+            val newErbId = repository.insertErbAndAzimuth(erb, azimute)
+            if(newErbId != -1L) { _newErbEvent.emit(LatLng(erb.latitude, erb.longitude)) }
+            onDismissDialog()
+        }
+    }
+
+    fun onConfirmEdit(item: Any) {
+        viewModelScope.launch {
+            when (item) {
+                is Erb -> repository.updateErb(item)
+                is Azimute -> repository.updateAzimute(item)
             }
             onDismissDialog()
         }
     }
 
-    fun onAddErbRequest() {
-        _itemToProcess.value = null
-        _erbForDialogContext.value = null
-        _isDialogVisible.value = true
-    }
-
-    fun onAddAzimuthRequest(erb: Erb) {
-        _selectedItem.value = null
-        _itemToProcess.value = erb
-        _erbForDialogContext.value = erb
-        _isDialogVisible.value = true
-    }
-
-    fun onEditRequest(item: Any) {
-        _selectedItem.value = null
-        if (item is Azimute) {
-            val parentErb = _erbsWithAzimutes.value.find { erbWithAzimutes ->
-                erbWithAzimutes.azimutes.any { it.id == item.id }
-            }?.erb
-            _erbForDialogContext.value = parentErb
-        }
-        _itemToProcess.value = item
-        _isDialogVisible.value = true
-    }
-
-    fun onDismissDialog() {
-        _isDialogVisible.value = false
-        _itemToProcess.value = null
-        _erbForDialogContext.value = null
-    }
-
-    fun onDeleteRequest(item: Any) {
-        _itemToDelete.value = item
-    }
-
+    // --- LÓGICA DE EXCLUSÃO (sem alterações) ---
+    fun onDeleteRequest(item: Any) { _itemToDelete.value = item }
     fun onConfirmDelete() {
         viewModelScope.launch {
             _itemToDelete.value?.let { item ->
@@ -93,24 +76,22 @@ class MapViewModel(private val repository: ErbRepository) : ViewModel() {
                     is Azimute -> repository.deleteAzimute(item)
                 }
             }
-            _itemToDelete.value = null
-            _selectedItem.value = null
+            _itemToDelete.value = null; _selectedItem.value = null
         }
     }
-
-    fun onDismissDelete() {
-        _itemToDelete.value = null
-    }
-
-    fun onItemSelected(item: Any) {
-        _selectedItem.value = item
-    }
-
-    fun onDismissDetails() {
-        _selectedItem.value = null
-    }
+    fun onDismissDelete() { _itemToDelete.value = null }
+    fun onItemSelected(item: Any) { _selectedItem.value = item }
+    fun onDismissDetails() { _selectedItem.value = null }
 }
 
+// NOVO: Classe selada para representar os diferentes estados do diálogo
+sealed class DialogState {
+    object Hidden : DialogState()
+    object AddErbAndAzimuth : DialogState()
+    data class AddAzimuth(val erb: Erb) : DialogState()
+    data class EditErb(val erb: Erb) : DialogState()
+    data class EditAzimuth(val azimute: Azimute, val parentErb: Erb) : DialogState()
+}
 
 class MapViewModelFactory(private val repository: ErbRepository) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
