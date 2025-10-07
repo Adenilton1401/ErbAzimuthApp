@@ -23,13 +23,14 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import devandroid.adenilton.erbazimuth.data.model.Azimute
 import devandroid.adenilton.erbazimuth.data.model.Erb
+import devandroid.adenilton.erbazimuth.ui.viewmodel.MapViewModel
 
 @Composable
 fun AddErbDialog(
     itemToProcess: Any? = null,
     erbForContext: Erb? = null,
     onDismiss: () -> Unit,
-    onConfirm: (Erb, Azimute, Azimute?) -> Unit
+    viewModel: MapViewModel
 ) {
     val azimuteToEdit = itemToProcess as? Azimute
     val isErbEditable = itemToProcess == null
@@ -46,12 +47,8 @@ fun AddErbDialog(
     val colors = remember {
         listOf(
             Color.Red, Color.Blue, Color.Green, Color.Yellow, Color.Magenta, Color.Cyan,
-            Color(0xFFFFA500), // Laranja
-            Color(0xFF800080), // Roxo
-            Color(0xFF008080), // Teal
-            Color(0xFFD2691E), // Chocolate
-            Color(0xFF4682B4), // SteelBlue
-            Color(0xFFDC143C)  // Crimson
+            Color(0xFFFFA500), Color(0xFF800080), Color(0xFF008080), Color(0xFFD2691E),
+            Color(0xFF4682B4), Color(0xFFDC143C)
         )
     }
 
@@ -113,6 +110,7 @@ fun AddErbDialog(
         }
         return true
     }
+
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -240,25 +238,38 @@ fun AddErbDialog(
             Button(
                 onClick = {
                     if (validateAllFields()) {
-                        // ATUALIZADO: Usa a ERB de contexto se disponível, senão cria uma nova com um casoId temporário.
-                        val finalErb = erbForContext ?: Erb(
-                            casoId = 0L, // ID temporário, será substituído pelo ViewModel
-                            identificacao = erbId,
-                            latitude = latitude.replace(',', '.').toDouble(),
-                            longitude = longitude.replace(',', '.').toDouble()
-                        )
-                        val finalAzimute = azimuteToEdit?.copy(
-                            descricao = azimuteDesc,
-                            azimute = azimuteValor.replace(',', '.').toDouble(),
-                            raio = raio.replace(',', '.').toDouble(),
-                            cor = selectedColor.value.toLong()
-                        ) ?: Azimute(
-                            descricao = azimuteDesc,
-                            azimute = azimuteValor.replace(',', '.').toDouble(),
-                            raio = raio.replace(',', '.').toDouble(),
-                            cor = selectedColor.value.toLong()
-                        )
-                        onConfirm(finalErb, finalAzimute, azimuteToEdit)
+                        // --- CORREÇÃO AQUI: Usa toDoubleOrNull() para conversão segura ---
+                        val lat = latitude.replace(',', '.').toDoubleOrNull()
+                        val lon = longitude.replace(',', '.').toDoubleOrNull()
+                        val az = azimuteValor.replace(',', '.').toDoubleOrNull()
+                        val r = raio.replace(',', '.').toDoubleOrNull()
+
+                        // Dupla verificação para garantir que a conversão foi bem-sucedida
+                        if (lat != null && lon != null && az != null && r != null) {
+                            val finalErb = erbForContext ?: Erb(
+                                casoId = 0L,
+                                identificacao = erbId,
+                                latitude = lat,
+                                longitude = lon
+                            )
+                            val finalAzimute = azimuteToEdit?.copy(
+                                descricao = azimuteDesc,
+                                azimute = az,
+                                raio = r,
+                                cor = selectedColor.value.toLong()
+                            ) ?: Azimute(
+                                descricao = azimuteDesc,
+                                azimute = az,
+                                raio = r,
+                                cor = selectedColor.value.toLong()
+                            )
+
+                            if (azimuteToEdit != null) {
+                                viewModel.onConfirmEdit(finalAzimute)
+                            } else {
+                                viewModel.onConfirmAdd(finalErb, finalAzimute)
+                            }
+                        }
                     }
                 }
             ) { Text("Salvar") }

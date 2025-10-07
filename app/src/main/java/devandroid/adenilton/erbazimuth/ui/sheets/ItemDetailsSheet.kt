@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -17,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import devandroid.adenilton.erbazimuth.data.model.Azimute
 import devandroid.adenilton.erbazimuth.data.model.Erb
+import devandroid.adenilton.erbazimuth.data.model.LocalInteresse
 
 @Composable
 fun ItemDetailsSheet(
@@ -36,56 +36,40 @@ fun ItemDetailsSheet(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.fillMaxWidth()
         ) {
-            // Cabeçalho com o título
+            // Título dinâmico com base no tipo do item
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (item is Erb) "Detalhes da ERB" else "Detalhes do Azimute",
+                    text = when(item) {
+                        is Erb -> "Detalhes da ERB"
+                        is Azimute -> "Detalhes do Azimute"
+                        is LocalInteresse -> "Detalhes do Local"
+                        else -> "Detalhes"
+                    },
                     style = MaterialTheme.typography.titleLarge
                 )
             }
 
             Spacer(Modifier.height(8.dp))
-            HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
+            Divider()
 
-            // NOVA SEÇÃO: Botões de ação com texto
+            // Botões de ação com texto
             Row(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 if (item is Erb) {
-                    ActionIconButton(
-                        text = "Ad. Azimute",
-                        icon = Icons.Default.AddCircle,
-                        contentDescription = "Adicionar Azimute",
-                        onClick = { onAddAzimuthClick(item) }
-                    )
-                    ActionIconButton(
-                        text = "Rota",
-                        icon = Icons.Default.LocationOn,
-                        contentDescription = "Criar Rota",
-                        onClick = { onNavigateClick(item) }
-                    )
+                    ActionIconButton(text = "Ad. Azimute", icon = Icons.Default.LocationOn, contentDescription = "Adicionar Azimute", onClick = { onAddAzimuthClick(item) })
+                    ActionIconButton(text = "Rota", icon = Icons.Default.PlayArrow, contentDescription = "Criar Rota", onClick = { onNavigateClick(item) })
                 }
-                ActionIconButton(
-                    text = "Editar",
-                    icon = Icons.Default.Edit,
-                    contentDescription = "Editar",
-                    onClick = { onEditClick(item) }
-                )
-                ActionIconButton(
-                    text = "Excluir",
-                    icon = Icons.Default.Delete,
-                    contentDescription = "Excluir",
-                    onClick = { onDeleteClick(item) },
-                    tint = MaterialTheme.colorScheme.error
-                )
+                ActionIconButton(text = "Editar", icon = Icons.Default.Edit, contentDescription = "Editar", onClick = { onEditClick(item) })
+                ActionIconButton(text = "Excluir", icon = Icons.Default.Delete, contentDescription = "Excluir", onClick = { onDeleteClick(item) }, tint = MaterialTheme.colorScheme.error)
             }
 
-            HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
+            Divider()
             Spacer(Modifier.height(8.dp))
 
 
@@ -111,6 +95,13 @@ fun ItemDetailsSheet(
                             Box(modifier = Modifier.size(20.dp).background(Color(item.cor.toULong())))
                         }
                     }
+                    // ATUALIZADO: para exibir os detalhes do novo tipo
+                    is LocalInteresse -> {
+                        DetailItem("Nome:", item.nome)
+                        DetailItem("Endereço:", item.endereco)
+                        DetailItem("Latitude:", item.latitude.toString())
+                        DetailItem("Longitude:", item.longitude.toString())
+                    }
                 }
             }
 
@@ -122,7 +113,6 @@ fun ItemDetailsSheet(
     }
 }
 
-// NOVO: Componente reutilizável para um botão de ação com ícone e texto
 @Composable
 private fun ActionIconButton(
     text: String,
@@ -138,17 +128,9 @@ private fun ActionIconButton(
             .clickable(onClick = onClick)
             .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            tint = tint
-        )
+        Icon(imageVector = icon, contentDescription = contentDescription, tint = tint)
         Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = text,
-            fontSize = 12.sp,
-            color = tint
-        )
+        Text(text = text, fontSize = 12.sp, color = tint)
     }
 }
 

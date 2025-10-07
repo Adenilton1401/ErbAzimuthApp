@@ -7,10 +7,7 @@ import android.os.Build
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBox
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
-//import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,19 +21,19 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.compose.*
 import devandroid.adenilton.erbazimuth.data.model.Erb
-import devandroid.adenilton.erbazimuth.ui.dialogs.AddErbDialog
-import devandroid.adenilton.erbazimuth.ui.dialogs.ConfirmDeleteDialog
-import devandroid.adenilton.erbazimuth.ui.dialogs.EditErbDialog
+import devandroid.adenilton.erbazimuth.data.model.LocalInteresse
+import devandroid.adenilton.erbazimuth.ui.dialogs.*
 import devandroid.adenilton.erbazimuth.ui.sheets.ItemDetailsSheet
 import devandroid.adenilton.erbazimuth.ui.viewmodel.DialogState
 import devandroid.adenilton.erbazimuth.ui.viewmodel.MapViewModel
 import devandroid.adenilton.erbazimuth.utils.MapUtils
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
@@ -46,6 +43,7 @@ fun MapScreen(
     onNavigateBack: () -> Unit
 ) {
     val erbsWithAzimutes by viewModel.erbsWithAzimutes.collectAsState()
+    val locaisInteresse by viewModel.locaisInteresse.collectAsState()
     val dialogState by viewModel.dialogState.collectAsState()
     val selectedItem by viewModel.selectedItem.collectAsState()
     val itemToDelete by viewModel.itemToDelete.collectAsState()
@@ -68,32 +66,78 @@ fun MapScreen(
 
     // Lógica para exibir o diálogo correto com base no estado do ViewModel
     when (val state = dialogState) {
-        is DialogState.AddErbAndAzimuth -> AddErbDialog(onDismiss = { viewModel.onDismissDialog() }, onConfirm = { erb, azimute, _ -> viewModel.onConfirmAdd(erb, azimute) })
-        is DialogState.AddAzimuth -> AddErbDialog(itemToProcess = state.erb, erbForContext = state.erb, onDismiss = { viewModel.onDismissDialog() }, onConfirm = { erb, azimute, _ -> viewModel.onConfirmAdd(erb, azimute) })
-        is DialogState.EditErb -> EditErbDialog(erbToEdit = state.erb, onDismiss = { viewModel.onDismissDialog() }, onConfirm = { updatedErb -> viewModel.onConfirmEdit(updatedErb) })
-        is DialogState.EditAzimuth -> AddErbDialog(itemToProcess = state.azimute, erbForContext = state.parentErb, onDismiss = { viewModel.onDismissDialog() }, onConfirm = { _, updatedAzimute, _ -> viewModel.onConfirmEdit(updatedAzimute) })
+        is DialogState.AddErbAndAzimuth -> AddErbDialog(
+            onDismiss = { viewModel.onDismissDialog() },
+            viewModel = viewModel
+        )
+        is DialogState.AddAzimuth -> AddErbDialog(
+            itemToProcess = state.erb,
+            erbForContext = state.erb,
+            onDismiss = { viewModel.onDismissDialog() },
+            viewModel = viewModel
+        )
+        is DialogState.EditErb -> EditErbDialog(
+            erbToEdit = state.erb,
+            onDismiss = { viewModel.onDismissDialog() },
+            onConfirm = { updatedErb -> viewModel.onConfirmEdit(updatedErb) }
+        )
+        is DialogState.EditAzimuth -> AddErbDialog(
+            itemToProcess = state.azimute,
+            erbForContext = state.parentErb,
+            onDismiss = { viewModel.onDismissDialog() },
+            viewModel = viewModel
+        )
+        is DialogState.AddLocalInteresse -> AddLocalInteresseDialog(
+            viewModel = viewModel,
+            onDismiss = { viewModel.onDismissDialog() }
+        )
+        is DialogState.EditLocalInteresse -> EditLocalInteresseDialog(
+            localToEdit = state.local,
+            onDismiss = { viewModel.onDismissDialog() },
+            onConfirm = { viewModel.onConfirmEdit(it) }
+        )
         DialogState.Hidden -> {}
     }
-    if (itemToDelete != null) { ConfirmDeleteDialog(itemToDelete = itemToDelete!!, onDismiss = { viewModel.onDismissDelete() }, onConfirm = { viewModel.onConfirmDelete() }) }
+
+    if (itemToDelete != null) {
+        ConfirmDeleteDialog(
+            itemToDelete = itemToDelete!!,
+            onDismiss = { viewModel.onDismissDelete() },
+            onConfirm = { viewModel.onConfirmDelete() }
+        )
+    }
 
     val brazilCenter = LatLng(-14.2350, -51.9253)
     val cameraPositionState = rememberCameraPositionState { position = CameraPosition.fromLatLngZoom(brazilCenter, 4f) }
 
-    LaunchedEffect(key1 = viewModel) {
-        // Escuta o evento de zoom inicial (apenas uma vez)
-        launch {
-            viewModel.initialCameraUpdate.firstOrNull()?.let { update ->
-                cameraPositionState.animate(update)
+    var isInitialZoomDone by remember(viewModel) { mutableStateOf(false) }
+
+    // Efeito para o zoom inicial
+    LaunchedEffect(erbsWithAzimutes, locaisInteresse) {
+        val allPoints = erbsWithAzimutes.map { LatLng(it.erb.latitude, it.erb.longitude) } +
+                locaisInteresse.map { LatLng(it.latitude, it.longitude) }
+
+        if (allPoints.isNotEmpty() && !isInitialZoomDone) {
+            val boundsBuilder = LatLngBounds.builder()
+            allPoints.forEach { boundsBuilder.include(it) }
+            val bounds = boundsBuilder.build()
+            val cameraUpdate = if (allPoints.size > 1) {
+                CameraUpdateFactory.newLatLngBounds(bounds, 150)
+            } else {
+                CameraUpdateFactory.newLatLngZoom(bounds.center, 14f)
             }
+            cameraPositionState.animate(cameraUpdate)
+            isInitialZoomDone = true
         }
-        // Continua escutando eventos de novas ERBs adicionadas
-        launch {
-            viewModel.newErbEvent.collectLatest { newErbLocation ->
-                cameraPositionState.animate(
-                    update = CameraUpdateFactory.newLatLngZoom(newErbLocation, 15f),
-                    durationMs = 1000
-                )
-            }
+    }
+
+    // Efeito para seguir novos pontos adicionados
+    LaunchedEffect(viewModel) {
+        viewModel.newPointEvent.collectLatest { newPointLocation ->
+            cameraPositionState.animate(
+                update = CameraUpdateFactory.newLatLngZoom(newPointLocation, 15f),
+                durationMs = 1000
+            )
         }
     }
 
@@ -101,7 +145,7 @@ fun MapScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(onClick = { viewModel.onAddErbRequest() }) {
-                Icon(Icons.Filled.Add, contentDescription = "Adicionar ERB")
+                Icon(Icons.Filled.Add, contentDescription = "Adicionar ERB e Azimute")
             }
         },
         floatingActionButtonPosition = FabPosition.Center,
@@ -113,6 +157,12 @@ fun MapScreen(
                         icon = Icons.Default.ArrowBack,
                         contentDescription = "Voltar para Casos",
                         onClick = onNavigateBack
+                    )
+                    BottomBarAction(
+                        text = "Local",
+                        icon = Icons.Default.LocationOn,
+                        contentDescription = "Adicionar Local de Interesse",
+                        onClick = { viewModel.onAddLocalInteresseRequest() }
                     )
                     BottomBarAction(
                         text = "Salvar",
@@ -143,13 +193,31 @@ fun MapScreen(
                 erbsWithAzimutes.forEach { erbWithAzimutes ->
                     val erb = erbWithAzimutes.erb
                     val position = LatLng(erb.latitude, erb.longitude)
-                    Marker(state = MarkerState(position = position), title = erb.identificacao, snippet = erb.endereco ?: "Clique para ver detalhes", onClick = { viewModel.onItemSelected(erb); true })
+                    Marker(
+                        state = MarkerState(position = position),
+                        title = erb.identificacao,
+                        snippet = erb.endereco ?: "Clique para ver detalhes",
+                        onClick = { viewModel.onItemSelected(erb); true }
+                    )
                     erbWithAzimutes.azimutes.forEach { azimute ->
                         val sectorPoints = MapUtils.calculateAzimuthSectorPoints(center = position, radius = azimute.raio, azimuth = azimute.azimute.toFloat())
                         if (sectorPoints.isNotEmpty()) {
                             Polygon(points = sectorPoints, fillColor = Color(azimute.cor.toULong()).copy(alpha = 0.5f), strokeColor = Color(azimute.cor.toULong()), strokeWidth = 5f, clickable = true, onClick = { viewModel.onItemSelected(azimute) })
                         }
                     }
+                }
+
+                locaisInteresse.forEach { local ->
+                    Marker(
+                        state = MarkerState(position = LatLng(local.latitude, local.longitude)),
+                        title = local.nome,
+                        snippet = local.endereco,
+                        icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE),
+                        onClick = {
+                            viewModel.onItemSelected(local)
+                            true
+                        }
+                    )
                 }
             }
         }
