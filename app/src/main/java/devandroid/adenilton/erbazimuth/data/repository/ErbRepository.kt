@@ -3,9 +3,9 @@ package devandroid.adenilton.erbazimuth.data.repository
 import android.content.Context
 import android.location.Geocoder
 import android.os.Build
-import android.util.Log
 import devandroid.adenilton.erbazimuth.data.database.ErbAzimuthDao
 import devandroid.adenilton.erbazimuth.data.model.Azimute
+import devandroid.adenilton.erbazimuth.data.model.Caso
 import devandroid.adenilton.erbazimuth.data.model.Erb
 import devandroid.adenilton.erbazimuth.data.model.ErbWithAzimutes
 import kotlinx.coroutines.Dispatchers
@@ -17,12 +17,19 @@ import java.util.Locale
 import kotlin.coroutines.resume
 
 class ErbRepository(private val dao: ErbAzimuthDao, private val context: Context) {
+    // --- Métodos para Casos ---
+    fun getAllCasos(): Flow<List<Caso>> = dao.getAllCasos()
+    suspend fun insertCaso(caso: Caso) = withContext(Dispatchers.IO) { dao.insertCaso(caso) }
+    suspend fun deleteCaso(caso: Caso) = withContext(Dispatchers.IO) { dao.deleteCaso(caso) }
+    // --- NOVO MÉTODO ---
+    suspend fun updateCaso(caso: Caso) = withContext(Dispatchers.IO) { dao.updateCaso(caso) }
 
-    fun getAllErbsWithAzimutes(): Flow<List<ErbWithAzimutes>> = dao.getAllErbsWithAzimutes()
+    // --- Métodos para ERB e Azimute ---
+    fun getErbsForCase(caseId: Long): Flow<List<ErbWithAzimutes>> = dao.getErbsForCase(caseId)
 
     suspend fun insertErbAndAzimuth(erb: Erb, azimute: Azimute): Long {
         return withContext(Dispatchers.IO) {
-            val existingErb = dao.getErbByIdentificacao(erb.identificacao)
+            val existingErb = dao.getErbByIdentificacao(erb.identificacao, erb.casoId)
             if (existingErb == null) {
                 val endereco = getAddressFromCoordinates(erb.latitude, erb.longitude)
                 val erbComEndereco = erb.copy(endereco = endereco)
@@ -39,20 +46,17 @@ class ErbRepository(private val dao: ErbAzimuthDao, private val context: Context
         }
     }
 
-    suspend fun deleteErb(erb: Erb) { withContext(Dispatchers.IO) { dao.deleteErb(erb) } }
-    suspend fun deleteAzimute(azimute: Azimute) { withContext(Dispatchers.IO) { dao.deleteAzimute(azimute) } }
-    suspend fun updateAzimute(azimute: Azimute) { withContext(Dispatchers.IO) { dao.updateAzimute(azimute) } }
-
-    // --- NOVO MÉTOD PARA ATUALIZAÇÃO DA ERB ---
     suspend fun updateErb(erb: Erb) {
         withContext(Dispatchers.IO) {
-            Log.d("ErbAzimuthApp", "Repository: Atualizando ERB ${erb.identificacao}")
-            // Re-busca o endereço caso as coordenadas tenham sido alteradas
             val endereco = getAddressFromCoordinates(erb.latitude, erb.longitude)
             val erbComEndereco = erb.copy(endereco = endereco)
             dao.updateErb(erbComEndereco)
         }
     }
+
+    suspend fun deleteErb(erb: Erb) { withContext(Dispatchers.IO) { dao.deleteErb(erb) } }
+    suspend fun updateAzimute(azimute: Azimute) { withContext(Dispatchers.IO) { dao.updateAzimute(azimute) } }
+    suspend fun deleteAzimute(azimute: Azimute) { withContext(Dispatchers.IO) { dao.deleteAzimute(azimute) } }
 
     private suspend fun getAddressFromCoordinates(lat: Double, lon: Double): String {
         if (!Geocoder.isPresent()) { return "Geocoder indisponível" }

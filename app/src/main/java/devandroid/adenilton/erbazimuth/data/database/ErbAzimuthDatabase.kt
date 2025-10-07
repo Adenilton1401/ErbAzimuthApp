@@ -5,9 +5,14 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import devandroid.adenilton.erbazimuth.data.model.Azimute
+import devandroid.adenilton.erbazimuth.data.model.Caso
 import devandroid.adenilton.erbazimuth.data.model.Erb
 
-@Database(entities = [Erb::class, Azimute::class], version = 1, exportSchema = false)
+@Database(
+    entities = [Erb::class, Azimute::class, Caso::class],
+    version = 2, // Mantemos a versão 2
+    exportSchema = false // Podemos desativar, já que não usaremos a migração automática por enquanto
+)
 abstract class ErbAzimuthDatabase : RoomDatabase() {
 
     abstract fun erbAzimuthDao(): ErbAzimuthDao
@@ -23,9 +28,9 @@ abstract class ErbAzimuthDatabase : RoomDatabase() {
                     ErbAzimuthDatabase::class.java,
                     "erb_azimuth_database"
                 )
-                    // --- ADICIONE ESTA LINHA ---
-                    // Instrui o Room a recriar o banco de dados se a estrutura mudar.
-                    // ATENÇÃO: Isso apagará todos os dados existentes.
+                    // --- CORREÇÃO AQUI ---
+                    // Se uma migração for necessária, simplesmente apaga e recria o banco.
+                    // ATENÇÃO: Isso apagará todos os dados existentes no app.
                     .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance

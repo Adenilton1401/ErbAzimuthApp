@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     // Adiciona o plugin KSP para processar as anotações do Room
     alias(libs.plugins.google.devtools.ksp)
+    alias(libs.plugins.androidx.room)
 }
 
 // Carrega as propriedades do arquivo local.properties
@@ -63,6 +64,11 @@ android {
     }
 }
 
+// Informa ao Room onde salvar os arquivos de esquema.
+room {
+    schemaDirectory("$projectDir/schemas")
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -85,6 +91,9 @@ dependencies {
     //implementation(libs.maps.utils.ktx)
     implementation(libs.android.maps.utils)
 
+    // NOVA DEPENDÊNCIA para gerenciar permissões no Compose
+    implementation(libs.accompanist.permissions)
+
     // Room
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
@@ -101,4 +110,5 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
 }

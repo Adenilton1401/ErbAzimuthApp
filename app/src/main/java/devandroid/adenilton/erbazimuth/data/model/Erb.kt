@@ -1,13 +1,25 @@
 package devandroid.adenilton.erbazimuth.data.model
 
 import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-// ATUALIZADO: Define o nome da tabela explicitamente para "erbs"
-@Entity(tableName = "erbs")
+@Entity(
+    tableName = "erbs",
+    foreignKeys = [ForeignKey(
+        entity = Caso::class,
+        parentColumns = ["id"],
+        childColumns = ["casoId"],
+        onDelete = ForeignKey.CASCADE
+    )],
+    indices = [Index(value = ["casoId"])]
+)
 data class Erb(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
+    // CAMPO ADICIONADO: Para vincular a ERB a um caso.
+    val casoId: Long,
     val identificacao: String,
     val latitude: Double,
     val longitude: Double,

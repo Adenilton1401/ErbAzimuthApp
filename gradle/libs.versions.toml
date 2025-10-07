@@ -16,8 +16,7 @@ androidxJunit = "1.1.5"
 espressoCore = "3.5.1"
 material = "1.12.0"
 playServicesMapsVersion = "19.2.0" # ADICIONADO: Dependência para temas XML
-#mapsUtilsKtx = "5.0.0"
-#mapsUtils = "3.8.0"
+accompanistPermissions = "0.32.0"
 androidMapsUtils = "3.5.2"
 navigationRuntimeKtx = "2.9.5"
 webkit = "1.14.0"
@@ -35,6 +34,7 @@ androidx-material3 = { module = "androidx.compose.material3:material3" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleViewmodelCompose" }
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycleRuntimeKtx" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" } # ADICIONADO
+accompanist-permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanistPermissions" }
 
 # Google Maps - Onde o problema ocorre
 maps-compose = { module = "com.google.maps.android:maps-compose", version.ref = "mapsCompose" }
@@ -64,3 +64,5 @@ androidx-webkit = { group = "androidx.webkit", name = "webkit", version.ref = "w
 android-application = { id = "com.android.application", version.ref = "androidApplication" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "jetbrainsKotlinAndroid" }
 google-devtools-ksp = { id = "com.google.devtools.ksp", version.ref = "googleDevtoolsKsp" }
+androidx-room = { id = "androidx.room", version.ref = "room" }
+

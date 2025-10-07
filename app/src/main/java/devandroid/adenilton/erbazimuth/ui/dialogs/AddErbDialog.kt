@@ -240,7 +240,9 @@ fun AddErbDialog(
             Button(
                 onClick = {
                     if (validateAllFields()) {
-                        val finalErb = Erb(
+                        // ATUALIZADO: Usa a ERB de contexto se disponível, senão cria uma nova com um casoId temporário.
+                        val finalErb = erbForContext ?: Erb(
+                            casoId = 0L, // ID temporário, será substituído pelo ViewModel
                             identificacao = erbId,
                             latitude = latitude.replace(',', '.').toDouble(),
                             longitude = longitude.replace(',', '.').toDouble()
