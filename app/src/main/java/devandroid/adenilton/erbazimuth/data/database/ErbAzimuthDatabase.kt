@@ -10,8 +10,9 @@ import devandroid.adenilton.erbazimuth.data.model.Erb
 import devandroid.adenilton.erbazimuth.data.model.LocalInteresse
 
 @Database(
+    // ATUALIZADO: Adiciona a nova entidade à lista
     entities = [Erb::class, Azimute::class, Caso::class, LocalInteresse::class],
-    version = 3, // Incrementamos a versão do banco de dados
+    version = 3, // Incrementamos a versão para sinalizar uma mudança na estrutura
     exportSchema = false
 )
 abstract class ErbAzimuthDatabase : RoomDatabase() {
@@ -29,7 +30,6 @@ abstract class ErbAzimuthDatabase : RoomDatabase() {
                     ErbAzimuthDatabase::class.java,
                     "erb_azimuth_database"
                 )
-                    // Como estamos em desenvolvimento, esta é a forma mais simples de lidar com a mudança na estrutura.
                     .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance

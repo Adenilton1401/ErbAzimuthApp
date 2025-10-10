@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!--
+      Configuração base para o aplicativo.
+      - cleartextTrafficPermitted="false": Proíbe tráfego HTTP por padrão.
+      - <trust-anchors>: Define que confiamos nos certificados padrão do sistema Android.
+    -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!--
+      Configuração específica para o domínio da API.
+      - includeSubdomains="true": Aplica a regra para api.unwiredlabs.com, etc.
+    -->
+    <domain-config>
+        <domain includeSubdomains="true">unwiredlabs.com</domain>
+        <!-- Reforça que para este domínio, também confiamos nos certificados do sistema. -->
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </domain-config>
+</network-security-config>

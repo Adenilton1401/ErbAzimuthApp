@@ -36,6 +36,9 @@ android {
 
         // Cria um recurso de string chamado 'maps_api_key' com o valor da chave.
         resValue("string", "maps_api_key", mapsApiKey)
+
+        val openCellIdApiKey = localProperties.getProperty("OPENCELLID_API_KEY") ?: "CHAVE_NAO_ENCONTRADA"
+        buildConfigField("String", "OPENCELLID_API_KEY", "\"$openCellIdApiKey\"")
     }
 
     buildTypes {
@@ -57,6 +60,7 @@ android {
     // Habilita o Jetpack Compose
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     // Configura o compilador do Compose
     composeOptions {
@@ -74,6 +78,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
+
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
@@ -90,6 +95,10 @@ dependencies {
     //implementation(libs.maps.ktx)
     //implementation(libs.maps.utils.ktx)
     implementation(libs.android.maps.utils)
+    implementation(libs.play.services.location)
+    implementation(libs.kotlinx.coroutines.play.services)
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.converter.gson)
 
     // NOVA DEPENDÊNCIA para gerenciar permissões no Compose
     implementation(libs.accompanist.permissions)
