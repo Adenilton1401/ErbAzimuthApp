@@ -7,11 +7,13 @@ import androidx.room.RoomDatabase
 import devandroid.adenilton.erbazimuth.data.model.Azimute
 import devandroid.adenilton.erbazimuth.data.model.Caso
 import devandroid.adenilton.erbazimuth.data.model.Erb
+import devandroid.adenilton.erbazimuth.data.model.LocalInteresse
 
 @Database(
-    entities = [Erb::class, Azimute::class, Caso::class],
-    version = 2, // Mantemos a versão 2
-    exportSchema = false // Podemos desativar, já que não usaremos a migração automática por enquanto
+    // ATUALIZADO: Adiciona a nova entidade à lista
+    entities = [Erb::class, Azimute::class, Caso::class, LocalInteresse::class],
+    version = 3, // Incrementamos a versão para sinalizar uma mudança na estrutura
+    exportSchema = false
 )
 abstract class ErbAzimuthDatabase : RoomDatabase() {
 
@@ -28,9 +30,6 @@ abstract class ErbAzimuthDatabase : RoomDatabase() {
                     ErbAzimuthDatabase::class.java,
                     "erb_azimuth_database"
                 )
-                    // --- CORREÇÃO AQUI ---
-                    // Se uma migração for necessária, simplesmente apaga e recria o banco.
-                    // ATENÇÃO: Isso apagará todos os dados existentes no app.
                     .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
