@@ -18,6 +18,7 @@ import androidx.room.PrimaryKey
 data class Erb(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
+    // CAMPO ADICIONADO: Para vincular a ERB a um caso.
     val casoId: Long,
     val identificacao: String,
     val latitude: Double,

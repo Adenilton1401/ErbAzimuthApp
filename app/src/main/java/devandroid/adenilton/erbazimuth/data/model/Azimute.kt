@@ -6,13 +6,13 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 @Entity(
-    tableName = "azimutes",
     foreignKeys = [ForeignKey(
         entity = Erb::class,
         parentColumns = ["id"],
         childColumns = ["erbOwnerId"],
         onDelete = ForeignKey.CASCADE
     )],
+    // ATUALIZADO: Adiciona o índice para otimizar as consultas
     indices = [Index(value = ["erbOwnerId"])]
 )
 data class Azimute(

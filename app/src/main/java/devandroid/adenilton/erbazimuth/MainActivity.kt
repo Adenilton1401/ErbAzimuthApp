@@ -39,36 +39,28 @@ class MainActivity : ComponentActivity() {
 fun AppNavigator(repository: ErbRepository) {
     var currentScreen by remember { mutableStateOf<Screen>(Screen.CaseList) }
     val application = LocalContext.current.applicationContext as Application
-    // Estado para controlar o diálogo de saída
     var showExitDialog by remember { mutableStateOf(false) }
-    // Obtém a atividade atual para poder fechá-la
     val activity = (LocalContext.current as? Activity)
 
-    // Lida com o clique no botão "Voltar" do sistema
     BackHandler {
         when (currentScreen) {
-            // Se estivermos em qualquer tela que não seja a principal, voltamos para a lista de casos.
             is Screen.Map, is Screen.MyTower -> {
                 currentScreen = Screen.CaseList
             }
-            // Se estivermos na tela principal, mostramos o diálogo de confirmação.
             is Screen.CaseList -> {
                 showExitDialog = true
             }
         }
     }
 
-    // Mostra o diálogo de confirmação se o estado for verdadeiro
     if (showExitDialog) {
         ExitConfirmationDialog(
             onDismiss = { showExitDialog = false },
             onConfirm = {
-                // Fecha a atividade, encerrando o aplicativo
                 activity?.finish()
             }
         )
     }
-
 
     when (val screen = currentScreen) {
         is Screen.CaseList -> {
@@ -80,7 +72,10 @@ fun AppNavigator(repository: ErbRepository) {
             )
         }
         is Screen.Map -> {
-            val mapViewModel: MapViewModel = viewModel(key = screen.caseId.toString(), factory = MapViewModelFactory(repository, screen.caseId))
+            val mapViewModel: MapViewModel = viewModel(
+                key = screen.caseId.toString(),
+                factory = MapViewModelFactory(application, repository, screen.caseId)
+            )
             MapScreen(
                 viewModel = mapViewModel,
                 onNavigateBack = { currentScreen = Screen.CaseList }

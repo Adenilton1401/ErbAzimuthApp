@@ -8,7 +8,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -28,12 +27,11 @@ import java.util.*
 @Composable
 fun CaseListScreen(
     viewModel: CaseViewModel,
-    onCaseSelected: (Long) -> Unit,
-    // NOVO PARÂMETRO
-    onNavigateToMyTower: () -> Unit
+    onCaseSelected: (Long) -> Unit
 ) {
     val cases by viewModel.cases.collectAsState()
     val showAddDialog by viewModel.showAddCaseDialog.collectAsState()
+    // NOVO: Observa o estado do caso a ser editado
     val caseToEdit by viewModel.caseToEdit.collectAsState()
 
     if (showAddDialog) {
@@ -43,6 +41,7 @@ fun CaseListScreen(
         )
     }
 
+    // NOVO: Mostra o diálogo de edição quando um caso é selecionado
     if (caseToEdit != null) {
         EditCaseDialog(
             casoToEdit = caseToEdit!!,
@@ -55,15 +54,6 @@ fun CaseListScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Casos de Investigação") },
-                // ATUALIZADO: Adiciona o botão de ação
-                actions = {
-                    IconButton(onClick = onNavigateToMyTower) {
-                        Icon(
-                            imageVector = Icons.Default.Phone,
-                            contentDescription = "Minha Torre"
-                        )
-                    }
-                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -116,6 +106,7 @@ fun CaseListItem(
             Text(text = caso.nome, style = MaterialTheme.typography.titleMedium)
             Text(text = "Criado em: ${dateFormat.format(Date(caso.dataCriacao))}", style = MaterialTheme.typography.bodySmall)
         }
+        // Botões de ação para cada item
         Row {
             IconButton(onClick = onEditClick) {
                 Icon(Icons.Default.Edit, contentDescription = "Editar Caso")

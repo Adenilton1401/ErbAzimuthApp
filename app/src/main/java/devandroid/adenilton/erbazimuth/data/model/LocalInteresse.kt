@@ -24,4 +24,3 @@ data class LocalInteresse(
     val latitude: Double,
     val longitude: Double
 )
-

@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ErbAzimuthDao {
-    // --- Métodos para Casos ---
+    // --- Métodos para Casos (sem alterações) ---
     @Insert
     suspend fun insertCaso(caso: Caso)
     @Query("SELECT * FROM casos ORDER BY dataCriacao DESC")
@@ -16,7 +16,8 @@ interface ErbAzimuthDao {
     @Update
     suspend fun updateCaso(caso: Caso)
 
-    // --- Métodos para ERB e Azimute ---
+
+    // --- Métodos para ERB e Azimute (sem alterações) ---
     @Transaction
     @Query("SELECT * FROM erbs WHERE casoId = :casoId")
     fun getErbsForCase(casoId: Long): Flow<List<ErbWithAzimutes>>
@@ -35,7 +36,7 @@ interface ErbAzimuthDao {
     @Delete
     suspend fun deleteAzimute(azimute: Azimute)
 
-    // --- MÉTODOS PARA LOCAIS DE INTERESSE ---
+    // --- NOVOS MÉTODOS PARA LOCAIS DE INTERESSE ---
     @Query("SELECT * FROM locais_interesse WHERE casoId = :casoId")
     fun getLocaisInteresseForCase(casoId: Long): Flow<List<LocalInteresse>>
 
