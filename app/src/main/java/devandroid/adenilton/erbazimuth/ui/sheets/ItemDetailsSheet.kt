@@ -15,6 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import devandroid.adenilton.erbazimuth.data.model.Azimute
+import devandroid.adenilton.erbazimuth.data.model.CellTowerInfo
 import devandroid.adenilton.erbazimuth.data.model.Erb
 import devandroid.adenilton.erbazimuth.data.model.LocalInteresse
 
@@ -47,6 +48,7 @@ fun ItemDetailsSheet(
                         is Erb -> "Detalhes da ERB"
                         is Azimute -> "Detalhes do Azimute"
                         is LocalInteresse -> "Detalhes do Local"
+                        is CellTowerInfo -> "Dados da Torre Conectada"
                         else -> "Detalhes"
                     },
                     style = MaterialTheme.typography.titleLarge
@@ -56,22 +58,24 @@ fun ItemDetailsSheet(
             Spacer(Modifier.height(8.dp))
             Divider()
 
-            // Botões de ação com texto
+            // Botões de ação com texto (agora condicionais)
             Row(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 if (item is Erb) {
                     ActionIconButton(text = "Ad. Azimute", icon = Icons.Default.LocationOn, contentDescription = "Adicionar Azimute", onClick = { onAddAzimuthClick(item) })
-                    ActionIconButton(text = "Rota", icon = Icons.Default.PlayArrow, contentDescription = "Criar Rota", onClick = { onNavigateClick(item) })
+                    ActionIconButton(text = "Rota", icon = Icons.Default.ArrowDropDown, contentDescription = "Criar Rota", onClick = { onNavigateClick(item) })
                 }
-                ActionIconButton(text = "Editar", icon = Icons.Default.Edit, contentDescription = "Editar", onClick = { onEditClick(item) })
-                ActionIconButton(text = "Excluir", icon = Icons.Default.Delete, contentDescription = "Excluir", onClick = { onDeleteClick(item) }, tint = MaterialTheme.colorScheme.error)
+                // Botões de editar e excluir não aparecem para CellTowerInfo
+                if (item !is CellTowerInfo) {
+                    ActionIconButton(text = "Editar", icon = Icons.Default.Edit, contentDescription = "Editar", onClick = { onEditClick(item) })
+                    ActionIconButton(text = "Excluir", icon = Icons.Default.Delete, contentDescription = "Excluir", onClick = { onDeleteClick(item) }, tint = MaterialTheme.colorScheme.error)
+                }
             }
 
             Divider()
             Spacer(Modifier.height(8.dp))
-
 
             // Corpo com os detalhes específicos do item
             Column(
@@ -95,12 +99,20 @@ fun ItemDetailsSheet(
                             Box(modifier = Modifier.size(20.dp).background(Color(item.cor.toULong())))
                         }
                     }
-                    // ATUALIZADO: para exibir os detalhes do novo tipo
                     is LocalInteresse -> {
                         DetailItem("Nome:", item.nome)
                         DetailItem("Endereço:", item.endereco)
                         DetailItem("Latitude:", item.latitude.toString())
                         DetailItem("Longitude:", item.longitude.toString())
+                    }
+                    // ATUALIZADO: para exibir os detalhes da torre
+                    is CellTowerInfo -> {
+                        DetailItem("Operadora:", item.operatorName)
+                        DetailItem("Sinal:", "${item.signalStrength} dBm")
+                        DetailItem("Cell ID:", item.cid.toString())
+                        DetailItem("LAC/TAC:", item.lac.toString())
+                        DetailItem("MCC:", item.mcc.toString())
+                        DetailItem("MNC:", item.mnc.toString())
                     }
                 }
             }

@@ -8,7 +8,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -28,9 +27,7 @@ import java.util.*
 @Composable
 fun CaseListScreen(
     viewModel: CaseViewModel,
-    onCaseSelected: (Long) -> Unit,
-    // NOVO PARÂMETRO
-    onNavigateToMyTower: () -> Unit
+    onCaseSelected: (Long) -> Unit
 ) {
     val cases by viewModel.cases.collectAsState()
     val showAddDialog by viewModel.showAddCaseDialog.collectAsState()
@@ -55,15 +52,8 @@ fun CaseListScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Casos de Investigação") },
-                // ATUALIZADO: Adiciona o botão de ação
-                actions = {
-                    IconButton(onClick = onNavigateToMyTower) {
-                        Icon(
-                            imageVector = Icons.Default.Phone,
-                            contentDescription = "Minha Torre"
-                        )
-                    }
-                },
+                // O botão de ação foi removido daqui
+                actions = { },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer

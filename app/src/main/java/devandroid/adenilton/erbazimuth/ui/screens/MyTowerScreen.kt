@@ -181,7 +181,7 @@ fun MyTowerScreen(
 
 // Componentes auxiliares para a UI
 @Composable
-fun InfoCard(title: String, content: @Composable ColumnScope.() -> Unit) {
+private fun InfoCard(title: String, content: @Composable ColumnScope.() -> Unit) {
     Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = title, style = MaterialTheme.typography.titleMedium)
@@ -192,7 +192,7 @@ fun InfoCard(title: String, content: @Composable ColumnScope.() -> Unit) {
 }
 
 @Composable
-fun InfoRow(label: String, value: String) {
+private fun InfoRow(label: String, value: String) {
     Row {
         Text(text = label, fontWeight = FontWeight.Bold, modifier = Modifier.width(100.dp))
         Text(text = value)
