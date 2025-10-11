@@ -111,6 +111,28 @@ fun MapScreen(
         }
     }
 
+    // --- NOVO EFEITO: Foco automático para a camada "Minha Torre" ---
+    LaunchedEffect(isMyTowerLayerVisible, userLocation, towerLocationList) {
+        // Roda o efeito apenas quando a camada está visível e os dados chegaram
+        if (isMyTowerLayerVisible) {
+            val userLatLng = userLocation?.let { LatLng(it.latitude, it.longitude) }
+            val allMyTowerPoints = towerLocationList + (userLatLng?.let { listOf(it) } ?: emptyList())
+
+            if (allMyTowerPoints.isNotEmpty()) {
+                val boundsBuilder = LatLngBounds.builder()
+                allMyTowerPoints.forEach { boundsBuilder.include(it) }
+                val bounds = boundsBuilder.build()
+                val cameraUpdate = if (allMyTowerPoints.size > 1) {
+                    CameraUpdateFactory.newLatLngBounds(bounds, 200) // Padding maior para ver os arredores
+                } else {
+                    CameraUpdateFactory.newLatLngZoom(bounds.center, 15f) // Zoom um pouco mais próximo
+                }
+                cameraPositionState.animate(cameraUpdate)
+            }
+        }
+    }
+
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -124,9 +146,8 @@ fun MapScreen(
                             else { towerPermissionsState.launchMultiplePermissionRequest() }
                         },
                         colors = IconButtonDefaults.iconButtonColors(
-                            // Muda a cor do botão quando a camada está ativa
                             containerColor = if (isMyTowerLayerVisible) Color.Green else Color.Red,
-                            contentColor = Color.White // Garante um bom contraste em ambas as cores
+                            contentColor = Color.White
                         )
                     ) {
                         Icon(
@@ -151,10 +172,10 @@ fun MapScreen(
                         horizontalArrangement = Arrangement.SpaceAround
                     ) {
                         BottomBarAction(
-                            text = "Local de interesse",
+                            text = "Local",
                             onClick = { viewModel.onAddLocalInteresseRequest() }
                         ) {
-                            Icon(painter = painterResource(id = R.drawable.btn_local), contentDescription = "Adicionar Local de Interesse")
+                            Icon(Icons.Default.LocationOn, contentDescription = "Adicionar Local de Interesse")
                         }
                         BottomBarAction(
                             text = "Salvar",
