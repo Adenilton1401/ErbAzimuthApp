@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -26,7 +27,6 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
@@ -111,28 +111,6 @@ fun MapScreen(
         }
     }
 
-    // --- NOVO EFEITO: Foco automático para a camada "Minha Torre" ---
-    LaunchedEffect(isMyTowerLayerVisible, userLocation, towerLocationList) {
-        // Roda o efeito apenas quando a camada está visível e os dados chegaram
-        if (isMyTowerLayerVisible) {
-            val userLatLng = userLocation?.let { LatLng(it.latitude, it.longitude) }
-            val allMyTowerPoints = towerLocationList + (userLatLng?.let { listOf(it) } ?: emptyList())
-
-            if (allMyTowerPoints.isNotEmpty()) {
-                val boundsBuilder = LatLngBounds.builder()
-                allMyTowerPoints.forEach { boundsBuilder.include(it) }
-                val bounds = boundsBuilder.build()
-                val cameraUpdate = if (allMyTowerPoints.size > 1) {
-                    CameraUpdateFactory.newLatLngBounds(bounds, 200) // Padding maior para ver os arredores
-                } else {
-                    CameraUpdateFactory.newLatLngZoom(bounds.center, 15f) // Zoom um pouco mais próximo
-                }
-                cameraPositionState.animate(cameraUpdate)
-            }
-        }
-    }
-
-
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -140,59 +118,74 @@ fun MapScreen(
                 title = { Text("Mapa do Caso") },
                 navigationIcon = { IconButton(onClick = onNavigateBack) { Icon(Icons.Default.ArrowBack, contentDescription = "Voltar para Casos") } },
                 actions = {
-                    IconButton(
-                        onClick = {
-                            if (towerPermissionsState.allPermissionsGranted) { viewModel.toggleMyTowerLayer() }
-                            else { towerPermissionsState.launchMultiplePermissionRequest() }
-                        },
-                        colors = IconButtonDefaults.iconButtonColors(
-                            containerColor = if (isMyTowerLayerVisible) Color.Green else Color.Red,
-                            contentColor = Color.White
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Text("Minha Torre", fontWeight = FontWeight.Normal, modifier = Modifier.padding(end = 5.dp))
+                        Switch(
+                            checked = isMyTowerLayerVisible,
+                            onCheckedChange = {
+                                if (!isMyTowerLayerVisible) {
+                                    if (towerPermissionsState.allPermissionsGranted) {
+                                        viewModel.toggleMyTowerLayer()
+                                    } else {
+                                        towerPermissionsState.launchMultiplePermissionRequest()
+                                    }
+                                } else {
+                                    viewModel.toggleMyTowerLayer()
+                                }
+                            },
+                            thumbContent = if (isMyTowerLayerVisible) {
+                                {
+                                    Icon(
+                                        imageVector = Icons.Filled.Check,
+                                        contentDescription = "Camada Ativa",
+                                        modifier = Modifier.size(SwitchDefaults.IconSize),
+                                    )
+                                }
+                            } else {
+                                null
+                            }
                         )
+                    }
+                }
+            )
+        },
+        bottomBar = {
+            BottomAppBar {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceAround,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    BottomBarAction(
+                        text = "Local",
+                        onClick = { viewModel.onAddLocalInteresseRequest() }
+                    ) {
+                        Icon(Icons.Default.LocationOn, contentDescription = "Adicionar Local de Interesse")
+                    }
+                    FloatingActionButton(
+                        onClick = { viewModel.onAddErbRequest() },
+                        elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 0.dp, pressedElevation = 4.dp)
+                    ) {
+                        Icon(Icons.Filled.Add, contentDescription = "Adicionar ERB e Azimute")
+                    }
+                    BottomBarAction(
+                        text = "Salvar",
+                        onClick = {
+                            if (storagePermissionState.status.isGranted) { viewModel.captureMapSnapshot(context) }
+                            else { storagePermissionState.launchPermissionRequest() }
+                        }
                     ) {
                         Icon(
-                            painter = painterResource(id = R.drawable.btn_my_tower),
-                            contentDescription = "Ativar Camada Minha Torre"
+                            painter = painterResource(id = R.drawable.btn_salvar),
+                            contentDescription = "Salvar Imagem do Mapa",
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                 }
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = { viewModel.onAddErbRequest() }) {
-                Icon(Icons.Filled.Add, contentDescription = "Adicionar ERB e Azimute")
             }
-        },
-        floatingActionButtonPosition = FabPosition.Center,
-        bottomBar = {
-            BottomAppBar(
-                actions = {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceAround
-                    ) {
-                        BottomBarAction(
-                            text = "Local",
-                            onClick = { viewModel.onAddLocalInteresseRequest() }
-                        ) {
-                            Icon(Icons.Default.LocationOn, contentDescription = "Adicionar Local de Interesse")
-                        }
-                        BottomBarAction(
-                            text = "Salvar",
-                            onClick = {
-                                if (storagePermissionState.status.isGranted) { viewModel.captureMapSnapshot(context) }
-                                else { storagePermissionState.launchPermissionRequest() }
-                            }
-                        ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.btn_salvar),
-                                contentDescription = "Salvar Imagem do Mapa",
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                    }
-                }
-            )
         }
     ) { paddingValues ->
         Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
@@ -203,9 +196,22 @@ fun MapScreen(
             ) {
                 MapEffect(Unit) { map -> viewModel.onMapLoaded(map) }
 
+                // Desenha os dados do CASO
                 erbsWithAzimutes.forEach { (erb, azimutes) ->
                     val position = LatLng(erb.latitude, erb.longitude)
-                    Marker(state = MarkerState(position = position), title = erb.identificacao, snippet = erb.endereco ?: "Clique para ver detalhes", onClick = { viewModel.onItemSelected(erb); true })
+                    MarkerComposable(
+                        state = MarkerState(position = position),
+                        title = erb.identificacao,
+                        snippet = erb.endereco ?: "Clique para ver detalhes",
+                        onClick = { viewModel.onItemSelected(erb); true }
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_tower),
+                            contentDescription = "ERB",
+                            modifier = Modifier.size(40.dp),
+                            tint = Color.Unspecified
+                        )
+                    }
                     azimutes.forEach { azimute ->
                         val sectorPoints = MapUtils.calculateAzimuthSectorPoints(center = position, radius = azimute.raio, azimuth = azimute.azimute.toFloat())
                         if (sectorPoints.isNotEmpty()) {
@@ -213,23 +219,71 @@ fun MapScreen(
                         }
                     }
                 }
+
                 locaisInteresse.forEach { local ->
-                    Marker(state = MarkerState(position = LatLng(local.latitude, local.longitude)), title = local.nome, snippet = local.endereco, icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE), onClick = { viewModel.onItemSelected(local); true })
+                    MarkerComposable(
+                        state = MarkerState(position = LatLng(local.latitude, local.longitude)),
+                        title = local.nome,
+                        snippet = "Clique para ver detalhes",
+                        onClick = { viewModel.onItemSelected(local); true }
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            // Rótulo de texto acima do ícone
+                            Text(
+                                text = local.nome,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black,
+                                fontSize = 12.sp,
+                                modifier = Modifier
+                                    .background(
+                                        color = Color.White.copy(alpha = 0.7f),
+                                        shape = MaterialTheme.shapes.small
+                                    )
+                                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                            )
+                            Icon(
+                                imageVector = Icons.Default.LocationOn,
+                                contentDescription = "Local de Interesse",
+                                modifier = Modifier.size(40.dp),
+                                tint = Color(0xFFC0392B) // Vermelho escuro
+                            )
+                        }
+                    }
                 }
 
+                // Desenha a CAMADA "MINHA TORRE" se estiver ATIVA
                 if (isMyTowerLayerVisible) {
-                    userLocation?.let { Marker(state = MarkerState(position = LatLng(it.latitude, it.longitude)), title = "Sua Posição") }
+                    userLocation?.let {
+                        MarkerComposable(
+                            state = MarkerState(position = LatLng(it.latitude, it.longitude)),
+                            title = "Sua Posição",
+                            zIndex = 1f // Garante que fique por cima
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Place,
+                                contentDescription = "Sua Posição",
+                                modifier = Modifier.size(48.dp),
+                                tint = MaterialTheme.colorScheme.secondary
+                            )
+                        }
+                    }
 
                     val towerData = cellTowerInfoList.zip(towerLocationList)
 
                     towerData.forEach { (info, location) ->
-                        Marker(
+                        MarkerComposable(
                             state = MarkerState(position = location),
                             title = info.operatorName,
                             snippet = "Clique para ver detalhes",
-                            icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE),
                             onClick = { viewModel.onItemSelected(info); true }
-                        )
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_tower),
+                                contentDescription = "Torre Conectada",
+                                modifier = Modifier.size(40.dp),
+                                tint = Color.Unspecified
+                            )
+                        }
                         userLocation?.let { userLoc ->
                             Polyline(points = listOf(LatLng(userLoc.latitude, userLoc.longitude), location), color = Color.Red, width = 10f)
                         }
@@ -272,6 +326,7 @@ private fun BottomBarAction(
         modifier = Modifier
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 4.dp)
+            .fillMaxHeight()
     ) {
         icon()
         Text(text = text, fontSize = 12.sp)
