@@ -4,6 +4,9 @@ import android.Manifest
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -95,7 +98,7 @@ fun MapScreen(
     val cameraPositionState = rememberCameraPositionState { position = CameraPosition.fromLatLngZoom(LatLng(-14.2350, -51.9253), 4f) }
     var isInitialZoomDone by remember(viewModel) { mutableStateOf(false) }
 
-    // Efeitos de animação da câmera
+    // Efeito de animação para o zoom inicial do caso
     LaunchedEffect(erbsWithAzimutes, locaisInteresse) {
         val allPoints = erbsWithAzimutes.map { LatLng(it.erb.latitude, it.erb.longitude) } + locaisInteresse.map { LatLng(it.latitude, it.longitude) }
         if (allPoints.isNotEmpty() && !isInitialZoomDone) {
@@ -105,9 +108,31 @@ fun MapScreen(
             isInitialZoomDone = true
         }
     }
+
+    // Efeito para focar em novos pontos adicionados (ERBs, Locais de Interesse)
     LaunchedEffect(viewModel) {
         viewModel.newPointEvent.collectLatest { newPointLocation ->
             cameraPositionState.animate(update = CameraUpdateFactory.newLatLngZoom(newPointLocation, 15f), durationMs = 1000)
+        }
+    }
+
+    // EFEITO RESTAURADO: Foco automático para a camada "Minha Torre"
+    LaunchedEffect(isMyTowerLayerVisible, userLocation, towerLocationList) {
+        if (isMyTowerLayerVisible) {
+            val userLatLng = userLocation?.let { LatLng(it.latitude, it.longitude) }
+            val allMyTowerPoints = towerLocationList + (userLatLng?.let { listOf(it) } ?: emptyList())
+
+            if (allMyTowerPoints.isNotEmpty()) {
+                val boundsBuilder = LatLngBounds.builder()
+                allMyTowerPoints.forEach { boundsBuilder.include(it) }
+                val bounds = boundsBuilder.build()
+                val cameraUpdate = if (allMyTowerPoints.size > 1) {
+                    CameraUpdateFactory.newLatLngBounds(bounds, 200)
+                } else {
+                    CameraUpdateFactory.newLatLngZoom(bounds.center, 15f)
+                }
+                cameraPositionState.animate(cameraUpdate)
+            }
         }
     }
 
@@ -115,7 +140,7 @@ fun MapScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("Mapa do Caso") },
+                title = { Text("Mapa") },
                 navigationIcon = { IconButton(onClick = onNavigateBack) { Icon(Icons.Default.ArrowBack, contentDescription = "Voltar para Casos") } },
                 actions = {
                     Row(
@@ -160,7 +185,7 @@ fun MapScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     BottomBarAction(
-                        text = "Local",
+                        text = "Interesses",
                         onClick = { viewModel.onAddLocalInteresseRequest() }
                     ) {
                         Icon(Icons.Default.LocationOn, contentDescription = "Adicionar Local de Interesse")
@@ -208,7 +233,7 @@ fun MapScreen(
                         Icon(
                             painter = painterResource(id = R.drawable.ic_tower),
                             contentDescription = "ERB",
-                            modifier = Modifier.size(40.dp),
+                            modifier = Modifier.size(48.dp),
                             tint = Color.Unspecified
                         )
                     }
@@ -228,7 +253,6 @@ fun MapScreen(
                         onClick = { viewModel.onItemSelected(local); true }
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            // Rótulo de texto acima do ícone
                             Text(
                                 text = local.nome,
                                 fontWeight = FontWeight.Bold,
@@ -260,9 +284,9 @@ fun MapScreen(
                             zIndex = 1f // Garante que fique por cima
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Place,
+                                imageVector = Icons.Default.Call,
                                 contentDescription = "Sua Posição",
-                                modifier = Modifier.size(48.dp),
+                                modifier = Modifier.size(40.dp),
                                 tint = MaterialTheme.colorScheme.secondary
                             )
                         }
@@ -280,7 +304,7 @@ fun MapScreen(
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_tower),
                                 contentDescription = "Torre Conectada",
-                                modifier = Modifier.size(40.dp),
+                                modifier = Modifier.size(48.dp),
                                 tint = Color.Unspecified
                             )
                         }
