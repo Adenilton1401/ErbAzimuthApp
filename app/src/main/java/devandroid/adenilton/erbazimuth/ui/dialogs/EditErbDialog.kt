@@ -18,6 +18,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import devandroid.adenilton.erbazimuth.data.model.Erb
+import devandroid.adenilton.erbazimuth.utils.CoordinateUtils
 
 @Composable
 fun EditErbDialog(
@@ -46,16 +47,16 @@ fun EditErbDialog(
             identificacaoFocusRequester.requestFocus()
             return false
         }
-        val latDouble = latitude.replace(',', '.').toDoubleOrNull()
+        val latDouble = CoordinateUtils.parseCoordinate(latitude)
         when {
             latitude.isBlank() -> { latitudeError = "Campo obrigatório"; latitudeFocusRequester.requestFocus(); return false }
-            latDouble == null -> { latitudeError = "Valor inválido"; latitudeFocusRequester.requestFocus(); return false }
+            latDouble == null -> { latitudeError = "Formato inválido"; latitudeFocusRequester.requestFocus(); return false }
             latDouble !in -90.0..90.0 -> { latitudeError = "Intervalo: -90 a 90"; latitudeFocusRequester.requestFocus(); return false }
         }
-        val lonDouble = longitude.replace(',', '.').toDoubleOrNull()
+        val lonDouble = CoordinateUtils.parseCoordinate(longitude)
         when {
             longitude.isBlank() -> { longitudeError = "Campo obrigatório"; longitudeFocusRequester.requestFocus(); return false }
-            lonDouble == null -> { longitudeError = "Valor inválido"; longitudeFocusRequester.requestFocus(); return false }
+            lonDouble == null -> { longitudeError = "Formato inválido"; longitudeFocusRequester.requestFocus(); return false }
             lonDouble !in -180.0..180.0 -> { longitudeError = "Intervalo: -180 a 180"; longitudeFocusRequester.requestFocus(); return false }
         }
         return true
@@ -81,7 +82,7 @@ fun EditErbDialog(
                 OutlinedTextField(
                     value = latitude,
                     onValueChange = { latitude = it; latitudeError = null },
-                    label = { Text("Latitude (-90 a 90)") },
+                    label = { Text("Latitude") },
                     isError = latitudeError != null,
                     supportingText = { latitudeError?.let { Text(it) } },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -89,9 +90,9 @@ fun EditErbDialog(
                         .focusRequester(latitudeFocusRequester)
                         .onFocusChanged {
                             if (!it.isFocused && latitude.isNotBlank()) {
-                                val lat = latitude.replace(',', '.').toDoubleOrNull()
+                                val lat = CoordinateUtils.parseCoordinate(latitude)
                                 latitudeError = when {
-                                    lat == null -> "Valor inválido"
+                                    lat == null -> "Formato inválido"
                                     lat !in -90.0..90.0 -> "Intervalo: -90 a 90"
                                     else -> null
                                 }
@@ -101,7 +102,7 @@ fun EditErbDialog(
                 OutlinedTextField(
                     value = longitude,
                     onValueChange = { longitude = it; longitudeError = null },
-                    label = { Text("Longitude (-180 a 180)") },
+                    label = { Text("Longitude") },
                     isError = longitudeError != null,
                     supportingText = { longitudeError?.let { Text(it) } },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -109,9 +110,9 @@ fun EditErbDialog(
                         .focusRequester(longitudeFocusRequester)
                         .onFocusChanged {
                             if (!it.isFocused && longitude.isNotBlank()) {
-                                val lon = longitude.replace(',', '.').toDoubleOrNull()
+                                val lon = CoordinateUtils.parseCoordinate(longitude)
                                 longitudeError = when {
-                                    lon == null -> "Valor inválido"
+                                    lon == null -> "Formato inválido"
                                     lon !in -180.0..180.0 -> "Intervalo: -180 a 180"
                                     else -> null
                                 }
@@ -124,12 +125,17 @@ fun EditErbDialog(
             Button(
                 onClick = {
                     if (validateAllFields()) {
-                        val updatedErb = erbToEdit.copy(
-                            identificacao = identificacao,
-                            latitude = latitude.replace(',', '.').toDouble(),
-                            longitude = longitude.replace(',', '.').toDouble()
-                        )
-                        onConfirm(updatedErb)
+                        val finalLat = CoordinateUtils.parseCoordinate(latitude)
+                        val finalLon = CoordinateUtils.parseCoordinate(longitude)
+
+                        if (finalLat != null && finalLon != null) {
+                            val updatedErb = erbToEdit.copy(
+                                identificacao = identificacao,
+                                latitude = finalLat,
+                                longitude = finalLon
+                            )
+                            onConfirm(updatedErb)
+                        }
                     }
                 }
             ) { Text("Salvar Alterações") }

@@ -7,13 +7,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import devandroid.adenilton.erbazimuth.R
 import devandroid.adenilton.erbazimuth.data.model.Azimute
 import devandroid.adenilton.erbazimuth.data.model.CellTowerInfo
 import devandroid.adenilton.erbazimuth.data.model.Erb
@@ -37,7 +40,7 @@ fun ItemDetailsSheet(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.fillMaxWidth()
         ) {
-            // Título dinâmico com base no tipo do item
+            // Título dinâmico
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center,
@@ -58,26 +61,42 @@ fun ItemDetailsSheet(
             Spacer(Modifier.height(8.dp))
             Divider()
 
-            // Botões de ação com texto (agora condicionais)
+            // Botões de ação atualizados para usar ícones customizados
             Row(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 if (item is Erb) {
-                    ActionIconButton(text = "Ad. Azimute", icon = Icons.Default.LocationOn, contentDescription = "Adicionar Azimute", onClick = { onAddAzimuthClick(item) })
-                    ActionIconButton(text = "Rota", icon = Icons.Default.ArrowDropDown, contentDescription = "Criar Rota", onClick = { onNavigateClick(item) })
+                    ActionIconButton(text = "Ad. Azimute", onClick = { onAddAzimuthClick(item) }) {
+                        Icon(Icons.Default.AddCircle,
+                            contentDescription = "Adicionar Azimute",
+                            tint = MaterialTheme.colorScheme.primary)
+                    }
+                    ActionIconButton(text = "Rota", onClick = { onNavigateClick(item) }) {
+                        Icon(painterResource(id = R.drawable.ic_navigation), contentDescription = "Criar Rota")
+                    }
                 }
-                // Botões de editar e excluir não aparecem para CellTowerInfo
                 if (item !is CellTowerInfo) {
-                    ActionIconButton(text = "Editar", icon = Icons.Default.Edit, contentDescription = "Editar", onClick = { onEditClick(item) })
-                    ActionIconButton(text = "Excluir", icon = Icons.Default.Delete, contentDescription = "Excluir", onClick = { onDeleteClick(item) }, tint = MaterialTheme.colorScheme.error)
+                    ActionIconButton(text = "Editar", onClick = { onEditClick(item) }) {
+                        Icon(Icons.Default.Edit, contentDescription = "Editar")
+                    }
+                    ActionIconButton(
+                        text = "Excluir",
+                        onClick = { onDeleteClick(item) },
+                        contentColor = MaterialTheme.colorScheme.error
+                    ) {
+                        Icon(Icons.Default.Delete,
+                            contentDescription = "Excluir",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(24.dp))
+                    }
                 }
             }
 
             Divider()
             Spacer(Modifier.height(8.dp))
 
-            // Corpo com os detalhes específicos do item
+            // Detalhes do item
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.Start,
@@ -105,7 +124,6 @@ fun ItemDetailsSheet(
                         DetailItem("Latitude:", item.latitude.toString())
                         DetailItem("Longitude:", item.longitude.toString())
                     }
-                    // ATUALIZADO: para exibir os detalhes da torre
                     is CellTowerInfo -> {
                         DetailItem("Operadora:", item.operatorName)
                         DetailItem("Sinal:", "${item.signalStrength} dBm")
@@ -125,13 +143,13 @@ fun ItemDetailsSheet(
     }
 }
 
+// --- ATUALIZADO: Componente reutilizável para um botão de ação ---
 @Composable
 private fun ActionIconButton(
     text: String,
-    icon: ImageVector,
-    contentDescription: String,
     onClick: () -> Unit,
-    tint: Color = LocalContentColor.current
+    contentColor: Color = LocalContentColor.current,
+    icon: @Composable () -> Unit
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -140,9 +158,15 @@ private fun ActionIconButton(
             .clickable(onClick = onClick)
             .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
-        Icon(imageVector = icon, contentDescription = contentDescription, tint = tint)
+        CompositionLocalProvider(LocalContentColor provides contentColor) {
+            icon()
+        }
         Spacer(modifier = Modifier.height(4.dp))
-        Text(text = text, fontSize = 12.sp, color = tint)
+        Text(
+            text = text,
+            fontSize = 12.sp,
+            color = contentColor
+        )
     }
 }
 

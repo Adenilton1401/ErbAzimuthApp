@@ -284,10 +284,10 @@ fun MapScreen(
                             zIndex = 1f // Garante que fique por cima
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Call,
+                                painter = painterResource(id = R.drawable.ic_my_position),
                                 contentDescription = "Sua Posição",
                                 modifier = Modifier.size(40.dp),
-                                tint = MaterialTheme.colorScheme.secondary
+                                tint = Color.Unspecified
                             )
                         }
                     }

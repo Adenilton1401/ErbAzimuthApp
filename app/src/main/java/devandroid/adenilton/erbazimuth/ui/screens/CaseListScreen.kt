@@ -14,8 +14,10 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Divider
+import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -86,7 +88,7 @@ fun CaseListScreen(
                 modifier = Modifier.Companion.fillMaxSize().padding(padding),
                 contentAlignment = Alignment.Companion.Center
             ) {
-                Text("Nenhum caso encontrado. Crie um novo para começar.")
+                Text("Nenhum caso encontrado.\nCrie um novo para começar.")
             }
         } else {
             LazyColumn(modifier = Modifier.Companion.padding(padding)) {
@@ -97,7 +99,7 @@ fun CaseListScreen(
                         onEditClick = { viewModel.onEditRequest(caso) },
                         onDeleteClick = { viewModel.deleteCase(caso) }
                     )
-                    Divider()
+                    HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
                 }
             }
         }
