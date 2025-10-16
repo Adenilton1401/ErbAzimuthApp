@@ -39,6 +39,9 @@ android {
 
         val openCellIdApiKey = localProperties.getProperty("OPENCELLID_API_KEY") ?: "CHAVE_NAO_ENCONTRADA"
         buildConfigField("String", "OPENCELLID_API_KEY", "\"$openCellIdApiKey\"")
+
+        val customMapId = localProperties.getProperty("CUSTOM_MAP_ID") ?: ""
+        buildConfigField("String", "CUSTOM_MAP_ID", "\"$customMapId\"")
     }
 
     buildTypes {

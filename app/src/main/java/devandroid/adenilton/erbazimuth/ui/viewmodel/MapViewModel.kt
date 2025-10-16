@@ -14,6 +14,7 @@ import android.telephony.CellInfoGsm
 import android.telephony.CellInfoLte
 import android.telephony.CellInfoWcdma
 import android.telephony.TelephonyManager
+import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.*
 import com.google.android.gms.location.LocationServices
@@ -167,6 +168,8 @@ class MapViewModel(
         }
     }
 
+
+
     fun onMapLoaded(map: GoogleMap) { this.googleMap = map }
     fun captureMapSnapshot(context: Context) {
         googleMap?.snapshot { bitmap ->
@@ -198,6 +201,7 @@ class MapViewModel(
             } finally { stream?.close() }
         }
     }
+
     fun onAddErbRequest() { _dialogState.value = DialogState.AddErbAndAzimuth }
     fun onAddAzimuthRequest(erb: Erb) { _selectedItem.value = null; _dialogState.value = DialogState.AddAzimuth(erb) }
     fun onAddLocalInteresseRequest() { _dialogState.value = DialogState.AddLocalInteresse }

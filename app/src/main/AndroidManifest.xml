@@ -30,6 +30,10 @@
             android:name="com.google.android.geo.API_KEY"
             android:value="@string/maps_api_key" />
 
+        <meta-data
+            android:name="com.google.android.geo.MAP_ID"
+            android:value="39198386ef1e9124e1c04055" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

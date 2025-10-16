@@ -13,11 +13,14 @@ class CaseViewModel(private val repository: ErbRepository) : ViewModel() {
     val cases: StateFlow<List<Caso>> = _cases.asStateFlow()
 
     private val _showAddCaseDialog = MutableStateFlow(false)
-    // CORREÇÃO AQUI: Removido o hífen
     val showAddCaseDialog: StateFlow<Boolean> = _showAddCaseDialog.asStateFlow()
 
     private val _caseToEdit = MutableStateFlow<Caso?>(null)
     val caseToEdit: StateFlow<Caso?> = _caseToEdit.asStateFlow()
+
+    // --- NOVO: ESTADO PARA O CASO A SER EXCLUÍDO ---
+    private val _caseToDelete = MutableStateFlow<Caso?>(null)
+    val caseToDelete: StateFlow<Caso?> = _caseToDelete.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -37,25 +40,35 @@ class CaseViewModel(private val repository: ErbRepository) : ViewModel() {
         }
     }
 
-    fun deleteCase(caso: Caso) {
-        viewModelScope.launch {
-            repository.deleteCaso(caso)
-        }
-    }
-
-    fun onEditRequest(caso: Caso) {
-        _caseToEdit.value = caso
-    }
-
-    fun onDismissEditDialog() {
-        _caseToEdit.value = null
-    }
-
+    // --- FUNÇÕES DE EDIÇÃO (sem alterações) ---
+    fun onEditRequest(caso: Caso) { _caseToEdit.value = caso }
+    fun onDismissEditDialog() { _caseToEdit.value = null }
     fun onConfirmEdit(caso: Caso) {
         viewModelScope.launch {
             repository.updateCaso(caso)
             onDismissEditDialog()
         }
+    }
+
+    // --- FUNÇÕES DE EXCLUSÃO ATUALIZADAS ---
+    // Inicia o processo de exclusão
+    fun onDeleteRequest(caso: Caso) {
+        _caseToDelete.value = caso
+    }
+
+    // Ação final após a confirmação do usuário
+    fun onConfirmDelete() {
+        viewModelScope.launch {
+            _caseToDelete.value?.let {
+                repository.deleteCaso(it)
+            }
+            onDismissDelete() // Fecha o diálogo
+        }
+    }
+
+    // Cancela a exclusão
+    fun onDismissDelete() {
+        _caseToDelete.value = null
     }
 }
 

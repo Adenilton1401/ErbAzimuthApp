@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import devandroid.adenilton.erbazimuth.data.model.Caso
 import devandroid.adenilton.erbazimuth.ui.dialogs.AddCaseDialog
+import devandroid.adenilton.erbazimuth.ui.dialogs.ConfirmDeleteCaseDialog
 import devandroid.adenilton.erbazimuth.ui.dialogs.EditCaseDialog
 import devandroid.adenilton.erbazimuth.ui.viewmodel.CaseViewModel
 import java.text.SimpleDateFormat
@@ -49,6 +50,7 @@ fun CaseListScreen(
     val cases by viewModel.cases.collectAsState()
     val showAddDialog by viewModel.showAddCaseDialog.collectAsState()
     val caseToEdit by viewModel.caseToEdit.collectAsState()
+    val caseToDelete by viewModel.caseToDelete.collectAsState()
 
     if (showAddDialog) {
         AddCaseDialog(
@@ -62,6 +64,14 @@ fun CaseListScreen(
             casoToEdit = caseToEdit!!,
             onDismiss = { viewModel.onDismissEditDialog() },
             onConfirm = { viewModel.onConfirmEdit(it) }
+        )
+    }
+
+    if (caseToDelete != null) {
+        ConfirmDeleteCaseDialog(
+            casoToDelete = caseToDelete!!,
+            onDismiss = { viewModel.onDismissDelete() },
+            onConfirm = { viewModel.onConfirmDelete() }
         )
     }
 
@@ -97,7 +107,7 @@ fun CaseListScreen(
                         caso = caso,
                         onClick = { onCaseSelected(caso.id) },
                         onEditClick = { viewModel.onEditRequest(caso) },
-                        onDeleteClick = { viewModel.deleteCase(caso) }
+                        onDeleteClick = { viewModel.onDeleteRequest(caso) }
                     )
                     HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
                 }

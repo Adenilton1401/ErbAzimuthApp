@@ -47,9 +47,9 @@ fun AddErbDialog(
 
     val colors = remember {
         listOf(
-            Color.Red, Color.Blue, Color.Green, Color.Yellow, Color.Magenta, Color.Cyan,
             Color(0xFFFFA500), Color(0xFF800080), Color(0xFF008080), Color(0xFFD2691E),
-            Color(0xFF4682B4), Color(0xFFDC143C)
+            Color(0xFFCFB100), Color(0xFFDC143C), Color(0xFF006400), Color(0xFF5A2BE2),
+            Color(0xFF40E0D0), Color(0xFF007080), Color(0xFFC2691E), Color(0xF08FA100)
         )
     }
 

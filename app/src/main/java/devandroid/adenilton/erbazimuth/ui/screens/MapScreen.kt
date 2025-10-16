@@ -4,14 +4,9 @@ import android.Manifest
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -19,7 +14,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -30,13 +24,14 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.GoogleMapOptions
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.compose.*
+import devandroid.adenilton.erbazimuth.BuildConfig
 import devandroid.adenilton.erbazimuth.R
 import devandroid.adenilton.erbazimuth.data.model.Erb
-import devandroid.adenilton.erbazimuth.data.model.LocalInteresse
 import devandroid.adenilton.erbazimuth.ui.dialogs.*
 import devandroid.adenilton.erbazimuth.ui.sheets.ItemDetailsSheet
 import devandroid.adenilton.erbazimuth.ui.viewmodel.DialogState
@@ -44,6 +39,7 @@ import devandroid.adenilton.erbazimuth.ui.viewmodel.MapViewModel
 import devandroid.adenilton.erbazimuth.utils.MapUtils
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
@@ -218,6 +214,7 @@ fun MapScreen(
                 modifier = Modifier.fillMaxSize(),
                 cameraPositionState = cameraPositionState,
                 uiSettings = MapUiSettings(zoomControlsEnabled = false),
+                googleMapOptionsFactory = {GoogleMapOptions().mapId(BuildConfig.CUSTOM_MAP_ID)}
             ) {
                 MapEffect(Unit) { map -> viewModel.onMapLoaded(map) }
 
