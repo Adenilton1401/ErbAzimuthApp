@@ -4,15 +4,11 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import devandroid.adenilton.erbazimuth.data.model.Azimute
-import devandroid.adenilton.erbazimuth.data.model.Caso
-import devandroid.adenilton.erbazimuth.data.model.Erb
-import devandroid.adenilton.erbazimuth.data.model.LocalInteresse
+import devandroid.adenilton.erbazimuth.data.model.*
 
 @Database(
-    // ATUALIZADO: Adiciona a nova entidade à lista
-    entities = [Erb::class, Azimute::class, Caso::class, LocalInteresse::class],
-    version = 3, // Incrementamos a versão para sinalizar uma mudança na estrutura
+    entities = [Erb::class, Azimute::class, Caso::class, LocalInteresse::class, CellTowerCache::class],
+    version = 5, // A versão pode continuar a mesma
     exportSchema = false
 )
 abstract class ErbAzimuthDatabase : RoomDatabase() {
@@ -31,6 +27,7 @@ abstract class ErbAzimuthDatabase : RoomDatabase() {
                     "erb_azimuth_database"
                 )
                     .fallbackToDestructiveMigration()
+                    // A lógica de Callback foi removida daqui
                     .build()
                 INSTANCE = instance
                 instance

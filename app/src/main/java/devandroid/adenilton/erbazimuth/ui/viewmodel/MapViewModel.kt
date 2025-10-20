@@ -138,19 +138,19 @@ class MapViewModel(
                             val id = cellInfo.cellIdentity
                             val mcc = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) id.mccString?.toIntOrNull()?:0 else @Suppress("DEPRECATION") id.mcc
                             val mnc = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) id.mncString?.toIntOrNull()?:0 else @Suppress("DEPRECATION") id.mnc
-                            CellTowerInfo(mcc, mnc, id.tac, id.ci, cellInfo.cellSignalStrength.dbm, mapMncToOperatorName(mcc, mnc))
+                            CellTowerInfo(mcc, mnc, id.tac.toLong(), id.ci.toLong(), cellInfo.cellSignalStrength.dbm, mapMncToOperatorName(mcc, mnc))
                         }
                         is CellInfoGsm -> {
                             val id = cellInfo.cellIdentity
                             val mcc = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) id.mccString?.toIntOrNull()?:0 else @Suppress("DEPRECATION") id.mcc
                             val mnc = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) id.mncString?.toIntOrNull()?:0 else @Suppress("DEPRECATION") id.mnc
-                            CellTowerInfo(mcc, mnc, id.lac, id.cid, cellInfo.cellSignalStrength.dbm, mapMncToOperatorName(mcc, mnc))
+                            CellTowerInfo(mcc, mnc, id.lac.toLong(), id.cid.toLong(), cellInfo.cellSignalStrength.dbm, mapMncToOperatorName(mcc, mnc))
                         }
                         is CellInfoWcdma -> {
                             val id = cellInfo.cellIdentity
                             val mcc = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) id.mccString?.toIntOrNull()?:0 else @Suppress("DEPRECATION") id.mcc
                             val mnc = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) id.mncString?.toIntOrNull()?:0 else @Suppress("DEPRECATION") id.mnc
-                            CellTowerInfo(mcc, mnc, id.lac, id.cid, cellInfo.cellSignalStrength.dbm, mapMncToOperatorName(mcc, mnc))
+                            CellTowerInfo(mcc, mnc, id.lac.toLong(), id.cid.toLong(), cellInfo.cellSignalStrength.dbm, mapMncToOperatorName(mcc, mnc))
                         }
                         else -> null
                     }

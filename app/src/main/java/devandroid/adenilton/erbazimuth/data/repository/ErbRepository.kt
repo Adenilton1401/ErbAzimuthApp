@@ -18,11 +18,13 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
 import retrofit2.http.POST
+import java.io.BufferedReader
 import java.io.IOException
+import java.io.InputStreamReader
 import java.util.*
 import kotlin.coroutines.resume
 
-// --- NOVAS CLASSES PARA O FORMATO DA API V2 (POST) ---
+// --- Classes e Interface para a API (sem alterações) ---
 data class CellLocationRequest(
     val token: String,
     val radio: String,
@@ -33,8 +35,8 @@ data class CellLocationRequest(
 )
 
 data class CellTower(
-    val lac: Int,
-    val cid: Int
+    val lac: Long, // Alterado para Long
+    val cid: Long  // Alterado para Long
 )
 
 data class CellLocationResponse(
@@ -44,7 +46,6 @@ data class CellLocationResponse(
     val lon: Double?
 )
 
-// --- INTERFACE RETROFIT ATUALIZADA ---
 interface UnwiredLabsService {
     @POST("v2/process.php")
     suspend fun getCellLocation(@Body request: CellLocationRequest): Response<CellLocationResponse>
@@ -54,25 +55,88 @@ interface UnwiredLabsService {
 class ErbRepository(private val dao: ErbAzimuthDao, private val context: Context) {
 
     private val unwiredLabsService: UnwiredLabsService = Retrofit.Builder()
-        // ATUALIZADO: URL base correta conforme a documentação v2
         .baseUrl("https://us1.unwiredlabs.com/")
         .addConverterFactory(GsonConverterFactory.create())
         .build()
         .create(UnwiredLabsService::class.java)
 
-    // --- MÉTODO ATUALIZADO PARA USAR A NOVA API ---
+    suspend fun prePopulateCacheIfNeeded() {
+        withContext(Dispatchers.IO) {
+            val prefs = context.getSharedPreferences("ErbAzimuthPrefs", Context.MODE_PRIVATE)
+            val isCachePopulated = prefs.getBoolean("is_cache_populated", false)
+
+            if (!isCachePopulated) {
+                Log.d("ErbAzimuthApp_DB", "Cache não populado. Iniciando pré-carregamento...")
+                try {
+                    val inputStream = context.assets.open("cell_towers.csv")
+                    val bufferReader = BufferedReader(InputStreamReader(inputStream))
+                    val towers = mutableListOf<CellTowerCache>()
+
+                    bufferReader.readLine() // Pula o cabeçalho
+
+                    var line: String?
+                    while (bufferReader.readLine().also { line = it } != null) {
+                        val currentLine = line ?: continue
+                        val tokens = currentLine.split(',')
+                        if (tokens.size >= 8) {
+                            try {
+                                val tower = CellTowerCache(
+                                    mcc = tokens[1].toInt(),
+                                    mnc = tokens[2].toInt(),
+                                    lac = tokens[3].toLong(),
+                                    cid = tokens[4].toLong(),
+                                    lat = tokens[7].toDouble(),
+                                    lon = tokens[6].toDouble()
+                                )
+                                towers.add(tower)
+
+                                if (towers.size >= 1000) {
+                                    dao.insertAllTowers(towers)
+                                    towers.clear()
+                                    Log.d("ErbAzimuthApp_DB", "Lote de 1000 torres inserido.")
+                                }
+                            } catch (e: Exception) {
+                                Log.e("ErbAzimuthApp_DB", "Erro ao processar a linha do CSV: $currentLine", e)
+                            }
+                        }
+                    }
+
+                    if (towers.isNotEmpty()) {
+                        dao.insertAllTowers(towers)
+                        Log.d("ErbAzimuthApp_DB", "Lote final de ${towers.size} torres inserido.")
+                    }
+
+                    prefs.edit().putBoolean("is_cache_populated", true).apply()
+                    Log.d("ErbAzimuthApp_DB", "Pré-carregamento do banco de dados concluído.")
+                } catch (e: IOException) {
+                    Log.e("ErbAzimuthApp_DB", "Erro ao ler o arquivo cell_towers.csv", e)
+                }
+            } else {
+                Log.d("ErbAzimuthApp_DB", "Cache de torres já populado. Nenhuma ação necessária.")
+            }
+        }
+    }
+
+    // --- MÉTOD ATUALIZADO COM A LÓGICA DE CACHE ---
     suspend fun getTowerLocation(info: CellTowerInfo): CellLocationResponse? {
+        // 1. Tenta buscar no cache local primeiro
+        val cachedTower = dao.findTowerInCache(info.mcc, info.mnc, info.lac, info.cid)
+        if (cachedTower != null) {
+            Log.d("ErbAzimuthApp", "Repository: Torre encontrada no cache local.")
+            return CellLocationResponse("ok", "Encontrado no cache local", cachedTower.lat, cachedTower.lon)
+        }
+
+        // 2. Se não encontrou no cache, verifica a internet
         if (!NetworkUtils.isNetworkAvailable(context)) {
-            Log.e("ErbAzimuthApp", "Repository: Sem conexão com a internet.")
+            Log.e("ErbAzimuthApp", "Repository: Torre não encontrada no cache e sem conexão com a internet.")
             return CellLocationResponse("error", "Sem conexão com a internet", null, null)
         }
 
-        Log.d("ErbAzimuthApp", "Repository: Buscando localização para a torre via API v2: MCC=${info.mcc}, MNC=${info.mnc}, LAC=${info.lac}, CID=${info.cid}")
-
-        // Constrói o corpo da requisição POST
+        // 3. Se tem internet, busca na API externa
+        Log.d("ErbAzimuthApp", "Repository: Torre não encontrada no cache. Buscando na API externa...")
         val request = CellLocationRequest(
             token = BuildConfig.OPENCELLID_API_KEY,
-            radio = "gsm", // A API aceita "gsm", "cdma", "umts", "lte". "gsm" é um bom padrão.
+            radio = "gsm",
             mcc = info.mcc,
             mnc = info.mnc,
             cells = listOf(CellTower(lac = info.lac, cid = info.cid))
@@ -83,6 +147,20 @@ class ErbRepository(private val dao: ErbAzimuthDao, private val context: Context
             if (response.isSuccessful) {
                 val responseBody = response.body()
                 Log.d("ErbAzimuthApp", "Repository: Resposta da API com sucesso: $responseBody")
+
+                // 4. Se a API retornou sucesso, salva no cache local para uso futuro
+                if (responseBody?.status == "ok" && responseBody.lat != null && responseBody.lon != null) {
+                    val newCacheEntry = CellTowerCache(
+                        mcc = info.mcc,
+                        mnc = info.mnc,
+                        lac = info.lac,
+                        cid = info.cid,
+                        lat = responseBody.lat,
+                        lon = responseBody.lon
+                    )
+                    dao.insertCellTower(newCacheEntry)
+                    Log.d("ErbAzimuthApp", "Repository: Nova torre salva no cache local.")
+                }
                 responseBody
             } else {
                 val errorBody = response.errorBody()?.string()

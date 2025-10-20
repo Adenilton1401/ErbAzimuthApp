@@ -47,5 +47,16 @@ interface ErbAzimuthDao {
 
     @Delete
     suspend fun deleteLocalInteresse(local: LocalInteresse)
+
+
+    // --- MÉTDOS PARA O CACHE DE TORRES ---
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertAllTowers(towers: List<CellTowerCache>)
+
+    @Query("SELECT * FROM cell_tower_cache WHERE mcc = :mcc AND mnc = :mnc AND lac = :lac AND cid = :cid LIMIT 1")
+    suspend fun findTowerInCache(mcc: Int, mnc: Int, lac: Long, cid: Long): CellTowerCache?
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertCellTower(tower: CellTowerCache)
 }
 

@@ -99,19 +99,19 @@ class MyTowerViewModel(application: Application, private val repository: ErbRepo
                             val identity = cellInfo.cellIdentity
                             val mcc = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) identity.mccString?.toIntOrNull() ?: 0 else @Suppress("DEPRECATION") identity.mcc
                             val mnc = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) identity.mncString?.toIntOrNull() ?: 0 else @Suppress("DEPRECATION") identity.mnc
-                            CellTowerInfo(mcc, mnc, identity.tac, identity.ci, cellInfo.cellSignalStrength.dbm, mapMncToOperatorName(mcc, mnc))
+                            CellTowerInfo(mcc, mnc, identity.tac.toLong(), identity.ci.toLong(), cellInfo.cellSignalStrength.dbm, mapMncToOperatorName(mcc, mnc))
                         }
                         is CellInfoGsm -> {
                             val identity = cellInfo.cellIdentity
                             val mcc = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) identity.mccString?.toIntOrNull() ?: 0 else @Suppress("DEPRECATION") identity.mcc
                             val mnc = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) identity.mncString?.toIntOrNull() ?: 0 else @Suppress("DEPRECATION") identity.mnc
-                            CellTowerInfo(mcc, mnc, identity.lac, identity.cid, cellInfo.cellSignalStrength.dbm, mapMncToOperatorName(mcc, mnc))
+                            CellTowerInfo(mcc, mnc, identity.lac.toLong(), identity.cid.toLong(), cellInfo.cellSignalStrength.dbm, mapMncToOperatorName(mcc, mnc))
                         }
                         is CellInfoWcdma -> {
                             val identity = cellInfo.cellIdentity
                             val mcc = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) identity.mccString?.toIntOrNull() ?: 0 else @Suppress("DEPRECATION") identity.mcc
                             val mnc = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) identity.mncString?.toIntOrNull() ?: 0 else @Suppress("DEPRECATION") identity.mnc
-                            CellTowerInfo(mcc, mnc, identity.lac, identity.cid, cellInfo.cellSignalStrength.dbm, mapMncToOperatorName(mcc, mnc))
+                            CellTowerInfo(mcc, mnc, identity.lac.toLong(), identity.cid.toLong(), cellInfo.cellSignalStrength.dbm, mapMncToOperatorName(mcc, mnc))
                         }
                         else -> null
                     }
